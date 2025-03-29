@@ -1,0 +1,52 @@
+@model FinancialProduct
+
+<div class="container py-5">
+    <div class="card border-crimson">
+        <div class="card-header bg-crimson text-white">
+            <h2>@Model.Name</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4><i class="fas fa-info-circle text-crimson"></i> What It Is</h4>
+                    <p>@Model.DetailedDescription</p>
+                    
+                    <h4 class="mt-4"><i class="fas fa-chart-line text-crimson"></i> Why You Need This</h4>
+                    <ul class="fa-ul">
+                        @foreach (var benefit in Model.Benefits.Split(','))
+                        {
+                            <li><span class="fa-li"><i class="fas fa-check text-crimson"></i></span>@benefit.Trim()</li>
+                        }
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <div class="bg-light p-4 rounded">
+                        <h4><i class="fas fa-play-circle text-crimson"></i> How To Start</h4>
+                        <p>@Model.HowToGetStarted</p>
+                        
+                        <div class="mt-4 p-3 bg-white rounded border">
+                            <h5 class="text-crimson">Pro Tip</h5>
+                            <p>@GetProTip(Model.Name)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <a href="@Url.Action("Index")" class="btn btn-outline-crimson mt-4">
+        <i class="fas fa-arrow-left"></i> Back to Playbook
+    </a>
+</div>
+
+@functions {
+    public string GetProTip(string productName)
+    {
+        return productName switch
+        {
+            "Roth IRA" => "Even $50/month now can grow to $150,000+ by retirement!",
+            "Student Credit Cards" => "Always pay the full balance - never just the minimum!",
+            _ => "Start small but start now - consistency beats perfection."
+        };
+    }
+}
