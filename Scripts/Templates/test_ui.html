@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending AI - Test UI</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 700px; margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #444; }
+        input[type="text"], input[type="password"], input[type="number"] { width: 95%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        select { padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { padding: 10px 15px; background-color: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: 500; transition: background-color 0.2s; }
+        button:hover { background-color: #3367d6; }
+        .secondary-button { background-color: #f1f1f1; color: #333; border: 1px solid #ddd; }
+        .secondary-button:hover { background-color: #e1e1e1; }
+        pre { background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; word-wrap: break-word; margin-top: 15px; font-family: monospace; }
+        .error { color: #d32f2f; font-weight: bold; }
+        h1, h2, h3 { color: #333; }
+        h1 { border-bottom: 2px solid #4285f4; padding-bottom: 10px; }
+        
+        /* Transaction response styling */
+        .hidden { display: none; }
+        .response-status { padding: 15px; text-align: center; color: #666; font-style: italic; }
+        .transaction-details { border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
+        .transaction-header { background-color: #f5f5f5; padding: 12px 15px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .transaction-header #transaction-icon { font-size: 20px; margin-right: 10px; }
+        .transaction-header #transaction-title { font-weight: 600; flex-grow: 1; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .badge.success { background-color: #e6f4ea; color: #137333; }
+        .badge.error { background-color: #fce8e6; color: #c5221f; }
+        .badge.warning { background-color: #fef7e0; color: #b06000; }
+        
+        .transaction-body { padding: 15px; }
+        .detail-row { display: flex; margin-bottom: 8px; }
+        .detail-label { width: 120px; color: #666; font-weight: 500; }
+        .detail-value { flex-grow: 1; font-weight: 400; }
+        .detail-value.highlight { color: #4285f4; font-weight: 600; }
+        
+        .analysis-section, .warnings-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; }
+        .analysis-section h4, .warnings-section h4 { margin-top: 0; color: #555; }
+        .analysis-content { padding: 0 5px; }
+        .analysis-content p { margin: 10px 0; line-height: 1.4; }
+        
+        .tags-container { margin: 10px 0; }
+        .tags-label { color: #666; margin-right: 8px; }
+        #analysis-tags { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+        .tag { background-color: #e8f0fe; color: #1a73e8; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .tag.essential { background-color: #e6f4ea; color: #137333; }
+        .tag.warning { background-color: #fef7e0; color: #b06000; }
+        
+        .warning-item { background-color: #fff4e1; border-left: 4px solid #f9ab00; padding: 10px; margin-bottom: 8px; border-radius: 0 4px 4px 0; }
+        .warning-item.critical { background-color: #fce8e6; border-left-color: #ea4335; }
+        
+        /* Transaction History Styles */
+        .filter-controls { margin-bottom: 20px; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+        .filter-group { display: flex; flex-direction: column; min-width: 120px; }
+        .primary-button { background-color: #4285f4; }
+        
+        .transaction-summary { margin: 20px 0; }
+        .summary-cards { display: flex; gap: 15px; margin-bottom: 20px; }
+        .summary-card { flex: 1; background-color: #f8f9fa; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .summary-title { font-size: 14px; color: #5f6368; margin-bottom: 8px; }
+        .summary-value { font-size: 24px; font-weight: 600; color: #202124; }
+        
+        .category-breakdown { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .category-item { background-color: #f1f3f4; border-radius: 16px; padding: 8px 12px; font-size: 14px; display: flex; align-items: center; }
+        .category-color { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .category-name { margin-right: 8px; }
+        .category-amount { font-weight: 500; }
+        
+        .transaction-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .transaction-table th { background-color: #f1f3f4; text-align: left; padding: 12px 15px; font-weight: 500; }
+        .transaction-table td { padding: 12px 15px; border-bottom: 1px solid #e0e0e0; }
+        .transaction-table tr:hover { background-color: #f8f9fa; }
+        
+        .transaction-category { display: inline-flex; align-items: center; }
+        .category-indicator { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+        
+        .transaction-amount { font-weight: 500; }
+        .transaction-amount.positive { color: #137333; }
+        .transaction-amount.negative { color: #c5221f; }
+        
+        .transaction-status { display: inline-flex; align-items: center; }
+        .status-indicator { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .status-indicator.flagged { background-color: #f9ab00; }
+        .status-indicator.normal { background-color: #137333; }
+        
+        .transaction-actions { display: flex; gap: 8px; }
+        .action-button { background: none; border: none; cursor: pointer; color: #1a73e8; font-size: 14px; padding: 4px 8px; border-radius: 4px; }
+        .action-button:hover { background-color: #e8f0fe; }
+        
+        .no-data { text-align: center; padding: 30px; color: #5f6368; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h1>Spending AI - Test Interface</h1>
+
+    <div class="container">
+        <h2>Register User</h2>
+        <form id="register-form">
+            <label for="reg-username">Username:</label>
+            <input type="text" id="reg-username" name="username" required>
+
+            <label for="reg-password">Password:</label>
+            <input type="password" id="reg-password" name="password" required>
+
+            <button type="submit">Register</button>
+        </form>
+        <h3>Registration Response:</h3>
+        <pre id="register-response">Response will appear here...</pre>
+    </div>
+
+    <div class="container">
+        <h2>Add Transaction</h2>
+        <form id="transaction-form">
+            <label for="trans-user-id">User ID:</label>
+            <input type="number" id="trans-user-id" name="user_id" required>
+
+            <label for="trans-amount">Amount:</label>
+            <input type="number" step="0.01" id="trans-amount" name="amount" required>
+
+            <label for="trans-category">Category:</label>
+            <select id="trans-category" name="category" required>
+                <option value="groceries">Groceries</option>
+                <option value="transport">Transport</option>
+                <option value="utilities">Utilities</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="dining">Dining</option>
+                <option value="shopping">Shopping</option>
+                <option value="subscription">Subscription</option>
+                <option value="other">Other</option>
+            </select>
+            <br><br> <label for="trans-timestamp">Timestamp (Optional, YYYY-MM-DD HH:MM:SS):</label>
+            <input type="text" id="trans-timestamp" name="timestamp" placeholder="e.g., 2025-03-29 22:55:00">
+
+
+            <button type="submit">Add Transaction</button>
+        </form>
+        <h3>Transaction Response:</h3>
+        <div id="transaction-response-container">
+            <div id="transaction-response-status" class="response-status">Waiting for transaction...</div>
+            <div id="transaction-details" class="transaction-details hidden">
+                <div class="transaction-header">
+                    <span id="transaction-icon">💰</span>
+                    <span id="transaction-title">Transaction Details</span>
+                    <span id="transaction-status-badge" class="badge">Pending</span>
+                </div>
+                <div class="transaction-body">
+                    <div class="detail-row">
+                        <span class="detail-label">Transaction ID:</span>
+                        <span id="detail-transaction-id" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount:</span>
+                        <span id="detail-amount" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Category:</span>
+                        <span id="detail-category" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Date:</span>
+                        <span id="detail-date" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Flagged:</span>
+                        <span id="detail-flagged" class="detail-value">-</span>
+                    </div>
+                </div>
+                <div id="analysis-section" class="analysis-section hidden">
+                    <h4>AI Analysis</h4>
+                    <div class="analysis-content">
+                        <p id="analysis-advice"></p>
+                        <div class="tags-container">
+                            <span class="tags-label">Tags:</span>
+                            <div id="analysis-tags"></div>
+                        </div>
+                        <p id="analysis-impact"></p>
+                    </div>
+                </div>
+                <div id="warnings-section" class="warnings-section hidden">
+                    <h4>Warnings</h4>
+                    <div id="warnings-content"></div>
+                </div>
+            </div>
+            <pre id="transaction-response" class="hidden">Response will appear here...</pre>
+            <button id="toggle-raw-json" class="secondary-button hidden">Show Raw JSON</button>
+        </div>
+    </div>
+
+    <!-- Transaction History Section -->
+    <div class="container">
+        <h2>Transaction History</h2>
+        <div class="filter-controls">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="history-user-id">User ID:</label>
+                    <input type="number" id="history-user-id" value="1" min="1">
+                </div>
+                <div class="filter-group">
+                    <label for="history-category">Category:</label>
+                    <select id="history-category">
+                        <option value="">All Categories</option>
+                        <option value="groceries">Groceries</option>
+                        <option value="transport">Transport</option>
+                        <option value="utilities">Utilities</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="dining">Dining</option>
+                        <option value="shopping">Shopping</option>
+                        <option value="subscription">Subscription</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="history-days">Time Period:</label>
+                    <select id="history-days">
+                        <option value="">All Time</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="history-flagged">Purchase Type:</label>
+                    <select id="history-flagged">
+                        <option value="">All Purchases</option>
+                        <option value="true">Impulsive Only</option>
+                        <option value="false">Non-Impulsive Only</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="history-limit">Limit:</label>
+                    <select id="history-limit">
+                        <option value="10">10 Transactions</option>
+                        <option value="25">25 Transactions</option>
+                        <option value="50" selected>50 Transactions</option>
+                        <option value="100">100 Transactions</option>
+                    </select>
+                </div>
+            </div>
+            <button id="load-transactions" class="primary-button">Load Transactions</button>
+        </div>
+        
+        <!-- Transaction History Summary -->
+        <div id="transaction-summary" class="transaction-summary hidden">
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-title">Total Transactions</div>
+                    <div id="summary-count" class="summary-value">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Total Spent</div>
+                    <div id="summary-amount" class="summary-value">$0.00</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Most Common Category</div>
+                    <div id="summary-top-category" class="summary-value">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Impulsive Purchases</div>
+                    <div id="summary-impulsive" class="summary-value">0</div>
+                </div>
+            </div>
+            <div id="category-breakdown" class="category-breakdown">
+                <!-- Category breakdown will be populated by JavaScript --> 
+            </div>
+        </div>
+        
+        <!-- Transaction History Table -->
+        <div id="transaction-history-container">
+            <div id="transaction-history-status" class="response-status">Click "Load Transactions" to view your transaction history</div>
+            <div id="transaction-table-container" class="hidden">
+                <table id="transaction-table" class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-table-body">
+                        <!-- Transaction rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+                <div id="no-transactions" class="no-data hidden">No transactions found matching your criteria.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('register-form');
+        const registerResponseArea = document.getElementById('register-response');
+
+        registerForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(registerForm);
+            const data = Object.fromEntries(formData.entries());
+            registerResponseArea.textContent = 'Sending request...';
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                registerResponseArea.textContent = JSON.stringify(result, null, 2); // Pretty print JSON
+                 if (!response.ok) { registerResponseArea.classList.add('error'); }
+                 else { registerResponseArea.classList.remove('error'); }
+            } catch (error) {
+                registerResponseArea.textContent = `Network or fetch error: ${error}`;
+                registerResponseArea.classList.add('error');
+            }
+        });
+
+        const transactionForm = document.getElementById('transaction-form');
+        const transactionResponseArea = document.getElementById('transaction-response');
+
+        transactionForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(transactionForm);
+            const data = Object.fromEntries(formData.entries());
+
+             // Convert amount and user_id to numbers
+            data.user_id = parseInt(data.user_id, 10);
+            data.amount = parseFloat(data.amount);
+
+            // Remove timestamp if empty
+            if (!data.timestamp) {
+                delete data.timestamp;
+            }
+
+
+            transactionResponseArea.textContent = 'Sending request...';
+
+            try {
+                const response = await fetch('/add_transaction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                // Store raw JSON for toggle view
+                transactionResponseArea.textContent = JSON.stringify(result, null, 2);
+                
+                // Update the UI with a more user-friendly display
+                const statusContainer = document.getElementById('transaction-response-status');
+                const detailsContainer = document.getElementById('transaction-details');
+                const rawJsonToggle = document.getElementById('toggle-raw-json');
+                
+                if (!response.ok) {
+                    statusContainer.textContent = `Error: ${result.message || 'Transaction failed'}`;
+                    statusContainer.classList.add('error');
+                    detailsContainer.classList.add('hidden');
+                    rawJsonToggle.classList.remove('hidden');
+                } else {
+                    // Hide the status message and show details
+                    statusContainer.classList.add('hidden');
+                    detailsContainer.classList.remove('hidden');
+                    rawJsonToggle.classList.remove('hidden');
+                    
+                    // Update transaction status badge
+                    const statusBadge = document.getElementById('transaction-status-badge');
+                    statusBadge.textContent = 'Success';
+                    statusBadge.classList.add('success');
+                    
+                    // Update transaction details
+                    const data = result.data;
+                    document.getElementById('detail-transaction-id').textContent = data.transaction_id;
+                    document.getElementById('detail-amount').textContent = `$${data.amount.toFixed(2)}`;
+                    document.getElementById('detail-amount').classList.add('highlight');
+                    document.getElementById('detail-category').textContent = data.category.charAt(0).toUpperCase() + data.category.slice(1);
+                    
+                    // Format date nicely
+                    const txDate = new Date(data.timestamp);
+                    document.getElementById('detail-date').textContent = txDate.toLocaleString();
+                    
+                    // Show flagged status with icon
+                    const flaggedEl = document.getElementById('detail-flagged');
+                    flaggedEl.textContent = data.flagged ? '⚠️ Yes (Potentially impulsive)' : '✅ No';
+                    if (data.flagged) flaggedEl.classList.add('warning');
+                    
+                    // Handle AI analysis if present
+                    const analysisSection = document.getElementById('analysis-section');
+                    if (data.analysis) {
+                        analysisSection.classList.remove('hidden');
+                        document.getElementById('analysis-advice').textContent = data.analysis.advice;
+                        document.getElementById('analysis-impact').textContent = data.analysis.impact;
+                        
+                        // Create tags
+                        const tagsContainer = document.getElementById('analysis-tags');
+                        tagsContainer.innerHTML = '';
+                        if (data.analysis.tags && data.analysis.tags.length > 0) {
+                            data.analysis.tags.forEach(tag => {
+                                const tagEl = document.createElement('span');
+                                tagEl.textContent = tag;
+                                tagEl.classList.add('tag');
+                                // Add special classes for certain tags
+                                if (['essential', 'necessary', 'needed'].includes(tag.toLowerCase())) {
+                                    tagEl.classList.add('essential');
+                                }
+                                if (['impulsive', 'unplanned', 'warning'].includes(tag.toLowerCase())) {
+                                    tagEl.classList.add('warning');
+                                }
+                                tagsContainer.appendChild(tagEl);
+                            });
+                        }
+                    } else {
+                        analysisSection.classList.add('hidden');
+                    }
+                    
+                    // Handle warnings if present
+                    const warningsSection = document.getElementById('warnings-section');
+                    const warningsContent = document.getElementById('warnings-content');
+                    if (result.warnings && result.warnings.length > 0) {
+                        warningsSection.classList.remove('hidden');
+                        warningsContent.innerHTML = '';
+                        
+                        result.warnings.forEach(warning => {
+                            const warningEl = document.createElement('div');
+                            warningEl.classList.add('warning-item');
+                            if (warning.severity === 'critical') {
+                                warningEl.classList.add('critical');
+                            }
+                            warningEl.textContent = warning.message;
+                            warningsContent.appendChild(warningEl);
+                        });
+                    } else {
+                        warningsSection.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                transactionResponseArea.textContent = `Network or fetch error: ${error}`;
+                transactionResponseArea.classList.add('error');
+            }
+        });
+        // Toggle between formatted view and raw JSON
+        document.getElementById('toggle-raw-json').addEventListener('click', function() {
+            const rawJson = document.getElementById('transaction-response');
+            const detailsView = document.getElementById('transaction-details');
+            const toggleButton = document.getElementById('toggle-raw-json');
+            
+            if (rawJson.classList.contains('hidden')) {
+                // Show raw JSON
+                rawJson.classList.remove('hidden');
+                detailsView.classList.add('hidden');
+                toggleButton.textContent = 'Show Formatted View';
+            } else {
+                // Show formatted view
+                rawJson.classList.add('hidden');
+                detailsView.classList.remove('hidden');
+                toggleButton.textContent = 'Show Raw JSON';
+            }
+        });
+        
+        // Transaction History functionality
+        const loadTransactionsButton = document.getElementById('load-transactions');
+        const historyUserIdInput = document.getElementById('history-user-id');
+        const historyCategorySelect = document.getElementById('history-category');
+        const historyDaysSelect = document.getElementById('history-days');
+        const historyFlaggedSelect = document.getElementById('history-flagged');
+        const historyLimitSelect = document.getElementById('history-limit');
+        const transactionHistoryStatus = document.getElementById('transaction-history-status');
+        const transactionTableContainer = document.getElementById('transaction-table-container');
+        const transactionTableBody = document.getElementById('transaction-table-body');
+        const noTransactionsDiv = document.getElementById('no-transactions');
+        const transactionSummary = document.getElementById('transaction-summary');
+        
+        // Category colors for visualization
+        const categoryColors = {
+            'groceries': '#34a853',
+            'transport': '#4285f4',
+            'utilities': '#fbbc05',
+            'entertainment': '#ea4335',
+            'dining': '#ff6d01',
+            'shopping': '#46bdc6',
+            'subscription': '#7baaf7',
+            'other': '#9aa0a6'
+        };
+        
+        loadTransactionsButton.addEventListener('click', async function() {
+            const userId = historyUserIdInput.value;
+            const category = historyCategorySelect.value;
+            const days = historyDaysSelect.value;
+            const flagged = historyFlaggedSelect.value;
+            const limit = historyLimitSelect.value;
+            
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+            
+            // Show loading status
+            transactionHistoryStatus.textContent = 'Loading transactions...';
+            transactionHistoryStatus.classList.remove('hidden');
+            transactionTableContainer.classList.add('hidden');
+            transactionSummary.classList.add('hidden');
+            
+            try {
+                // Build the query parameters
+                let queryParams = new URLSearchParams();
+                if (category) queryParams.append('category', category);
+                if (days) queryParams.append('days', days);
+                if (flagged) queryParams.append('flagged', flagged);
+                if (limit) queryParams.append('limit', limit);
+                
+                // Make the API request
+                const response = await fetch(`/transactions/${userId}?${queryParams.toString()}`);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    transactionHistoryStatus.textContent = `Error: ${result.message || 'Could not load transactions'}`;
+                    transactionHistoryStatus.classList.add('error');
+                    return;
+                }
+                
+                // Hide status message
+                transactionHistoryStatus.classList.add('hidden');
+                
+                // Process the data
+                const transactions = result.data.transactions;
+                const stats = result.data.stats;
+                
+                if (transactions.length === 0) {
+                    // Show no transactions message
+                    transactionTableContainer.classList.remove('hidden');
+                    noTransactionsDiv.classList.remove('hidden');
+                    return;
+                }
+                
+                // Show the table and hide no transactions message
+                transactionTableContainer.classList.remove('hidden');
+                noTransactionsDiv.classList.add('hidden');
+                
+                // Update the summary section
+                updateTransactionSummary(stats);
+                
+                // Clear existing table rows
+                transactionTableBody.innerHTML = '';
+                
+                // Add transaction rows
+                transactions.forEach(transaction => {
+                    const row = document.createElement('tr');
+                    
+                    // Format date
+                    const txDate = new Date(transaction.timestamp);
+                    const formattedDate = txDate.toLocaleString();
+                    
+                    // Create cells
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td>
+                            <div class="transaction-category">
+                                <span class="category-indicator" style="background-color: ${categoryColors[transaction.category] || '#9aa0a6'}"></span>
+                                ${transaction.category.charAt(0).toUpperCase() + transaction.category.slice(1)}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="transaction-amount negative">$${transaction.amount.toFixed(2)}</span>
+                        </td>
+                        <td>
+                            <div class="transaction-status">
+                                <span class="status-indicator ${transaction.flagged ? 'flagged' : 'normal'}"></span>
+                                ${transaction.flagged ? 'Flagged' : 'Normal'}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="transaction-actions">
+                                <button class="action-button" onclick="viewTransactionDetails(${transaction.transaction_id})">View</button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    transactionTableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                transactionHistoryStatus.textContent = `Network or fetch error: ${error}`;
+                transactionHistoryStatus.classList.add('error');
+            }
+        });
+        
+        function updateTransactionSummary(stats) {
+            // Show the summary section
+            transactionSummary.classList.remove('hidden');
+            
+            // Update summary cards
+            document.getElementById('summary-count').textContent = stats.total_count;
+            document.getElementById('summary-amount').textContent = `$${stats.total_amount.toFixed(2)}`;
+            
+            // Count impulsive purchases
+            let impulsiveCount = 0;
+            for (const transaction of result.data.transactions) {
+                if (transaction.flagged) {
+                    impulsiveCount++;
+                }
+            }
+            document.getElementById('summary-impulsive').textContent = impulsiveCount;
+            
+            // Find the most common category
+            let topCategory = { name: '-', count: 0 };
+            for (const [category, data] of Object.entries(stats.categories)) {
+                if (data.count > topCategory.count) {
+                    topCategory = { name: category, count: data.count };
+                }
+            }
+            document.getElementById('summary-top-category').textContent = 
+                topCategory.name !== '-' ? topCategory.name.charAt(0).toUpperCase() + topCategory.name.slice(1) : '-';
+            
+            // Create category breakdown
+            const categoryBreakdownEl = document.getElementById('category-breakdown');
+            categoryBreakdownEl.innerHTML = '';
+            
+            for (const [category, data] of Object.entries(stats.categories)) {
+                const categoryItem = document.createElement('div');
+                categoryItem.className = 'category-item';
+                categoryItem.innerHTML = `
+                    <span class="category-color" style="background-color: ${categoryColors[category] || '#9aa0a6'}"></span>
+                    <span class="category-name">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    <span class="category-amount">$${data.total.toFixed(2)}</span>
+                `;
+                categoryBreakdownEl.appendChild(categoryItem);
+            }
+        }
+        
+        // Function to view transaction details (placeholder for now)
+        function viewTransactionDetails(transactionId) {
+            alert(`View details for transaction ${transactionId} (This would open a detailed view in a production app)`);  
+        }
+    </script>
+
+</body>
+</html>

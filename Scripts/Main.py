@@ -19,7 +19,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 AI_MODEL = genai.GenerativeModel('gemini-2.0-flash-lite')
 AI_ENABLED = True
 
-class FinancialFlowchartGenerator:
+class FinancialSummaryGenerator:
     def __init__(self):
         self.user_data = {
             'income': {},
@@ -203,59 +203,6 @@ class FinancialFlowchartGenerator:
                 by_category[category].append(purchase)
             
             self.financial_metrics['high_ticket_by_category'] = by_category
-
-    def generate_standard_recommendations(self):
-        """Generate personalized financial recommendations based on analysis"""
-        # Clear previous recommendations
-        self.recommendations = []
-        
-        # Income and expense recommendations
-        monthly_income = self.user_data['income'].get('monthly', 0)
-        total_expenses = self.financial_metrics.get('total_expenses', 0)
-        expense_ratio = total_expenses / monthly_income if monthly_income > 0 else float('inf')
-        
-        if expense_ratio > 0.7:
-            self.recommendations.append({
-                'category': 'Budgeting',
-                'title': 'Reduce monthly expenses',
-                'description': 'Your expenses are taking up more than 70% of your income. Consider using the 50/30/20 budgeting rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment.'
-            })
-        
-        # Savings recommendations
-        savings_rate = self.financial_metrics.get('savings_rate', 0)
-        if savings_rate < 0.1:
-            self.recommendations.append({
-                'category': 'Savings',
-                'title': 'Increase savings rate',
-                'description': 'Your current savings rate is below 10%. Try to build an emergency fund covering 3-6 months of expenses, then focus on long-term savings goals.'
-            })
-        
-        # Debt recommendations
-        debt_to_income = self.financial_metrics.get('debt_to_income', 0)
-        if debt_to_income > 0.36:
-            self.recommendations.append({
-                'category': 'Debt Management',
-                'title': 'Reduce debt burden',
-                'description': 'Your debt-to-income ratio is high. Consider using the debt snowball method (paying smallest debts first) or debt avalanche method (paying highest interest debts first).'
-            })
-        
-        # High-ticket purchase recommendations
-        high_ticket_total = self.financial_metrics.get('high_ticket_total', 0)
-        annual_income = monthly_income * 12
-        if high_ticket_total > annual_income * 0.2:
-            self.recommendations.append({
-                'category': 'Spending Habits',
-                'title': 'Review high-ticket purchases',
-                'description': 'Your high-ticket purchases represent a significant portion of your annual income. Consider implementing a 30-day waiting period before major purchases to reduce impulse buying.'
-            })
-        
-        # General financial literacy recommendations
-        self.recommendations.append({
-            'category': 'Financial Education',
-            'title': 'Continue financial education',
-            'description': 'Explore resources like the Consumer Financial Protection Bureau (consumerfinance.gov) for free financial education materials.'
-        })
-        
         # Standard recommendations generated
     
     def generate_ai_recommendations(self):
@@ -376,8 +323,6 @@ class FinancialFlowchartGenerator:
                     else:
                         i += 1
 
-            # No need to add a last recommendation - we're using a different parsing approach now
-
             # Basic validation: Ensure we got something reasonable
             if parsed_recs and all('title' in r and 'description' in r for r in parsed_recs):
                  # Assign category (optional, could ask AI for this too)
@@ -393,7 +338,162 @@ class FinancialFlowchartGenerator:
         except Exception as e:
             # Error occurred, use standard recommendations
             self.generate_standard_recommendations()
-
+            
+    def analyze_transaction(self, transaction_data):
+        """Analyze a specific transaction and provide AI feedback.
+        
+        Args:
+            transaction_data: Dictionary containing transaction details such as:
+                - amount: float, the transaction amount
+                - category: str, the transaction category
+                - timestamp: datetime, when the transaction occurred
+                - financial_context: dict, additional financial context (optional)
+                
+        Returns:
+            dict: Analysis results containing:
+                - advice: str, personalized advice about the transaction
+                - tags: list, relevant behavior tags (e.g., 'impulsive', 'planned')
+                - impact: str, assessment of financial impact
+        """        
+        if not self.ai_enabled:
+            # Fallback to basic analysis if AI is not available
+            return self._basic_transaction_analysis(transaction_data)
+            
+        # Unpack transaction data with defaults
+        amount = transaction_data.get('amount', 0)
+        category = transaction_data.get('category', 'unknown')
+        timestamp = transaction_data.get('timestamp', datetime.now())
+        financial_context = transaction_data.get('financial_context', {})
+        
+        # Format time for context
+        time_of_day = timestamp.strftime('%H:%M')
+        day_of_week = timestamp.strftime('%A')
+        date_str = timestamp.strftime('%Y-%m-%d')
+        
+        # Extract useful context if available
+        monthly_income = financial_context.get('monthly_income', 0)
+        budget_limit = financial_context.get('budget_limit', {}).get(category, 0)
+        current_spending = financial_context.get('current_spending', {}).get(category, 0)
+        
+        # Prepare budget context
+        budget_context = ""
+        if budget_limit > 0:
+            remaining = budget_limit - current_spending
+            budget_context = f"\nBudget for {category}: ${budget_limit:.2f}\nAlready spent this month: ${current_spending:.2f}\nRemaining budget: ${remaining:.2f}"
+        
+        # Prepare income context
+        income_context = ""
+        if monthly_income > 0:
+            percentage = (amount / monthly_income) * 100
+            income_context = f"\nThis transaction represents {percentage:.1f}% of your monthly income."
+        
+        # Construct AI prompt
+        prompt = f"""
+        Act as a personal financial assistant analyzing a single transaction. Provide immediate, concise feedback on this spending:
+        
+        Transaction details:
+        - Amount: ${amount:.2f}
+        - Category: {category}
+        - Date: {date_str}
+        - Time: {time_of_day} ({day_of_week})
+        {budget_context}
+        {income_context}
+        
+        Analyze this specific transaction and provide:
+        1. SPENDING ADVICE: One or two sentences of personalized feedback on this specific purchase. Consider timing, amount, category, and financial context.
+        2. BEHAVIOR TAGS: Classify this spending with 1-3 brief tags (e.g. 'essential', 'impulsive', 'planned', 'recreational')
+        3. FINANCIAL IMPACT: A single sentence assessment of how this affects the person's overall financial health.
+        
+        Format your response like this:
+        ADVICE: [your specific advice]
+        TAGS: [tag1, tag2, tag3]
+        IMPACT: [impact assessment]
+        """
+        
+        try:
+            # Send request to AI model and get response
+            response = self.ai_model.generate_content(prompt)
+            ai_text = response.text.strip()
+            
+            # Parse the AI response
+            advice = ""
+            tags = []
+            impact = ""
+            
+            # Extract the advice section
+            advice_match = re.search(r'ADVICE:\s*(.*?)(?:\n|$)', ai_text, re.DOTALL)
+            if advice_match:
+                advice = advice_match.group(1).strip()
+            
+            # Extract the tags
+            tags_match = re.search(r'TAGS:\s*(.*?)(?:\n|$)', ai_text)
+            if tags_match:
+                # Split tags by commas and clean them up
+                tags_text = tags_match.group(1).strip()
+                tags = [tag.strip().lower() for tag in re.split(r'[,\s]+', tags_text) if tag.strip()]
+            
+            # Extract the impact assessment
+            impact_match = re.search(r'IMPACT:\s*(.*?)(?:\n|$)', ai_text, re.DOTALL)
+            if impact_match:
+                impact = impact_match.group(1).strip()
+            
+            # Ensure we have at least the minimum required data
+            if not advice:
+                advice = "Consider whether this purchase aligns with your financial goals."
+            if not tags:
+                tags = ["unclassified"]
+            if not impact:
+                impact = "This transaction's impact is unclear without more context."
+                
+            return {
+                'advice': advice,
+                'tags': tags,
+                'impact': impact,
+                'ai_generated': True
+            }
+            
+        except Exception as e:
+            print(f"Error generating AI transaction analysis: {e}")
+            # Fallback to basic analysis
+            return self._basic_transaction_analysis(transaction_data)
+    
+    def _basic_transaction_analysis(self, transaction_data):
+        """Provide basic transaction analysis without AI."""
+        amount = transaction_data.get('amount', 0)
+        category = transaction_data.get('category', 'unknown')
+        
+        # Very simple rules-based analysis
+        advice = "Consider tracking your spending in this category over time."
+        tags = ["tracked"]
+        impact = "This transaction has been recorded in your financial history."
+        
+        # Categorize based on amount thresholds
+        if amount > 100:
+            tags.append("significant")
+            advice = "This is a significant purchase. Make sure it aligns with your priorities."
+            impact = "Larger purchases can impact your monthly budget significantly."
+        elif amount < 10:
+            tags.append("small")
+        
+        # Categorize based on category type
+        essential_categories = ['groceries', 'utilities', 'rent', 'mortgage', 'healthcare', 'transportation']
+        if category.lower() in essential_categories:
+            tags.append("essential")
+            advice = "Essential spending is necessary, but still look for ways to optimize."
+            impact = "Essential spending is part of your necessary monthly expenses."
+        else:
+            tags.append("discretionary")
+            if amount > 50:
+                advice = "For discretionary spending, always consider if the value matches the cost."
+                impact = "Non-essential purchases should be balanced with your saving goals."
+        
+        return {
+            'advice': advice,
+            'tags': tags,
+            'impact': impact,
+            'ai_generated': False
+        }
+        
     def generate_summary(self, output_file="financial_summary.txt"):
         
         # Create a text-based summary instead of a visual flowchart
