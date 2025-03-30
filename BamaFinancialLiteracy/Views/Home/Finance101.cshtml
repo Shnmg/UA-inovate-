@@ -1,0 +1,515 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Finance 101";
+}
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">
+            <img src="/images/bama-logo.png" width="50" class="me-3" alt="UA Logo">
+            Finance 101 Essentials
+        </h1>
+        <p class="lead">Fundamental financial knowledge for UA students</p>
+    </div>
+
+    <div class="accordion" id="financeAccordion">
+        <!-- Credit Basics Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-crimson text-dark" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                    <i class="fas fa-credit-card me-2"></i> Credit Basics
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collapse collapse show" 
+                 data-bs-parent="#financeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p>
+                                Credit is the idea of receiving something of value now and promising to pay it back later.
+                                It is usually associated with a credit score—a three-digit number ranging from 300–850—which represents your creditworthiness.
+                                FICO is one of the most widely used credit scores.
+                            </p>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-star me-2"></i> Credit Score (The 5 C's)
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">
+                                                        <i class="fas fa-user me-2"></i>Character
+                                                    </h5>
+                                                    <p>Your credit history and payment behavior</p>
+                                                    <ul class="fa-ul">
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-check-circle text-info"></i>
+                                                            </span>
+                                                            Check reports at 
+                                                            <a href="https://www.annualcreditreport.com" target="_blank">annualcreditreport.com</a>
+                                                        </li>
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-check-circle text-info"></i>
+                                                            </span>
+                                                            Review all 3 bureaus: Experian, Equifax, TransUnion
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">
+                                                        <i class="fas fa-calculator me-2"></i>Capacity
+                                                    </h5>
+                                                    <p>Your debt-to-income ratio</p>
+                                                    <ul class="fa-ul">
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-percentage text-warning"></i>
+                                                            </span>
+                                                            Keep below 20% of income
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">
+                                                        <i class="fas fa-money-bill-wave me-2"></i>Capital
+                                                    </h5>
+                                                    <p>Your income and ability to pay</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">
+                                                        <i class="fas fa-home me-2"></i>Collateral
+                                                    </h5>
+                                                    <p>Assets securing your debt</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">
+                                                        <i class="fas fa-globe me-2"></i>Conditions
+                                                    </h5>
+                                                    <p>External economic factors (outside your control)</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-percentage me-2"></i> Interest Rates
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Similar to banking interest rates, the goal is to have the lowest interest rate possible for any debt.
+                                    </p>
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        High interest rates can significantly increase your total repayment amount
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-chart-line me-2"></i> Building Credit
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Payment history plays the largest role in your credit score. Always pay bills on time.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-thumbs-up me-2"></i>
+                                                <strong>Do:</strong> Pay on time, keep balances low
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="alert alert-danger">
+                                                <i class="fas fa-thumbs-down me-2"></i>
+                                                <strong>Avoid:</strong> Late payments, maxing out cards
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-credit-card me-2"></i> Credit Cards
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Revolving credit that allows you to borrow up to a limit and repay over time.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5 class="text-crimson">Benefits</h5>
+                                            <ul class="fa-ul">
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-check text-success"></i>
+                                                    </span>
+                                                    Cash back rewards
+                                                </li>
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-check text-success"></i>
+                                                    </span>
+                                                    Fraud protection
+                                                </li>
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-check text-success"></i>
+                                                    </span>
+                                                    Builds credit history
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5 class="text-crimson">Risks</h5>
+                                            <ul class="fa-ul">
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                    </span>
+                                                    High interest if not paid in full
+                                                </li>
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                    </span>
+                                                    Easy to overspend
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info mt-3">
+                                        <i class="fas fa-lightbulb me-2"></i>
+                                        <strong>Tip:</strong> Keep utilization below 30% of your limit
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i> Personal Loans
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Installment loans with fixed payments that help build credit when paid responsibly.
+                                    </p>
+                                    <ul class="fa-ul">
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-check-circle text-info"></i>
+                                            </span>
+                                            Fixed repayment schedule
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-check-circle text-info"></i>
+                                            </span>
+                                            Can help diversify credit mix
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                                            </span>
+                                            Compare rates from multiple lenders
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-tachometer-alt me-2"></i> Credit Limits
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">Ideal Usage</h5>
+                                                    <ul class="fa-ul">
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-check text-success"></i>
+                                                            </span>
+                                                            Below 30% of limit
+                                                        </li>
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-check text-success"></i>
+                                                            </span>
+                                                            Below 20% of income
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h5 class="text-crimson">Warning Signs</h5>
+                                                    <ul class="fa-ul">
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-exclamation text-danger"></i>
+                                                            </span>
+                                                            Maxed out cards
+                                                        </li>
+                                                        <li>
+                                                            <span class="fa-li">
+                                                                <i class="fas fa-exclamation text-danger"></i>
+                                                            </span>
+                                                            Multiple late payments
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Banking Basics Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button bg-crimson text-dark" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                    <i class="fas fa-university me-2"></i> Banking Basics
+                </button>
+            </h2>
+            <div id="collapseTwo" class="accordion-collapse collapse" 
+                 data-bs-parent="#financeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p>
+                                As you budget and begin to save, you need somewhere to store your money (no offense to mattresses).
+                                Fortunately, there are lots of banking options to choose from.
+                                This section provides a brief overview of the two most common types: credit unions and traditional banks.
+                            </p>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-users me-2"></i> Credit Unions
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Credit unions are considered non-profits made up of members with something in common—such as the same school, employer, or location.
+                                    </p>
+                                    <ul class="fa-ul">
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-percentage text-info"></i>
+                                            </span>
+                                            Usually offer lower interest rates than traditional banks
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-map-marker-alt text-info"></i>
+                                            </span>
+                                            Local-focused but may be part of the NCUA network
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-hand-holding-usd text-info"></i>
+                                            </span>
+                                            Often have lower fees
+                                        </li>
+                                    </ul>
+                                    <a href="https://www.ncua.gov/" class="btn btn-outline-crimson mt-2" target="_blank">
+                                        <i class="fas fa-external-link-alt me-1"></i> NCUA Website
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-landmark me-2"></i> Traditional Banks
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Traditional banks are for-profit institutions with more branches nationwide.
+                                    </p>
+                                    <ul class="fa-ul">
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-map-marked-alt text-info"></i>
+                                            </span>
+                                            More locations for travelers
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-graduation-cap text-info"></i>
+                                            </span>
+                                            Often offer student accounts with no fees
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-money-bill-wave text-info"></i>
+                                            </span>
+                                            May charge monthly fees for some accounts
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>FDIC Insurance:</strong> Ensures your deposits up to $250,000 per account
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-chart-line me-2"></i> Interest & APY
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        <strong>Interest</strong> is the amount added to your balance (good for savings, bad for debt).
+                                    </p>
+                                    <p>
+                                        <strong>APY (Annual Percentage Yield)</strong> includes compound interest. For example, 12% APY compounded monthly equals about 1% each month.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-piggy-bank me-2"></i>
+                                                <strong>Savings Goal:</strong> Highest possible APY
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-credit-card me-2"></i>
+                                                <strong>Debt Goal:</strong> Lowest possible interest rate
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-certificate me-2"></i> Certificates of Deposit (CDs)
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Savings accounts with fixed interest rates and terms ranging from 3 months to several years.
+                                    </p>
+                                    <ul class="fa-ul">
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-lock text-info"></i>
+                                            </span>
+                                            Higher rates than regular savings
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                                            </span>
+                                            Early withdrawal penalties
+                                        </li>
+                                        <li>
+                                            <span class="fa-li">
+                                                <i class="fas fa-calendar-alt text-info"></i>
+                                            </span>
+                                            Choose term lengths carefully
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header bg-crimson text-dark">
+                                    <i class="fas fa-retirement me-2"></i> IRAs
+                                </div>
+                                <div class="card-body">
+                                    <p>Individual retirement accounts for tax-advantaged savings.</p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5 class="text-crimson">Traditional IRA</h5>
+                                            <ul class="fa-ul">
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-file-invoice-dollar text-info"></i>
+                                                    </span>
+                                                    Tax-deferred contributions
+                                                </li>
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-taxi text-warning"></i>
+                                                    </span>
+                                                    Taxed at withdrawal
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5 class="text-crimson">Roth IRA</h5>
+                                            <ul class="fa-ul">
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-file-invoice text-info"></i>
+                                                    </span>
+                                                    After-tax contributions
+                                                </li>
+                                                <li>
+                                                    <span class="fa-li">
+                                                        <i class="fas fa-gift text-success"></i>
+                                                    </span>
+                                                    Tax-free withdrawals
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.collapse').forEach(function(collapse) {
+                collapse.addEventListener('show.bs.collapse', function() {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+        });
+    </script>
+}

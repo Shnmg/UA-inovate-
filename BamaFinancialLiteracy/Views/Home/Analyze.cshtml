@@ -1,0 +1,38 @@
+@{
+    ViewData["Title"] = "Analyze Your Spending";
+}
+
+<div class="container text-center py-5">
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        <img src="/images/bama-logo.png" alt="Alabama Logo" width="60" class="me-3">
+        <h1 class="display-4 mb-0">Analyze Your Spending</h1>
+    </div>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3><i class="fas fa-file-import text-crimson"></i> CSV Import</h3>
+                    <p>Upload a CSV file containing your financial transactions.</p>
+                    <form asp-action="ImportCsv" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input type="file" name="file" class="form-control" accept=".csv" required />
+                        </div>
+                        <button type="submit" class="btn btn-crimson btn-lg">
+                            <i class="fas fa-upload"></i> Import CSV
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
