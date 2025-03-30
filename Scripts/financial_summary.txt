@@ -1,0 +1,81 @@
+===== FINANCIAL SUMMARY =====
+
+Monthly Income: $1.00
+
+EXPENSES:
+  Rent/Mortgage: $1.00 (100.0% of income)
+  Utilities: $1.00 (100.0% of income)
+  Food: $1.00 (100.0% of income)
+  Transportation: $1.00 (100.0% of income)
+  Entertainment: $1.00 (100.0% of income)
+  Insurance: $1.00 (100.0% of income)
+  Other: $1.00 (100.0% of income)
+  Total Expenses: $7.00
+
+Monthly Savings: $1.00 (100.0% of income)
+
+DEBT:
+  Credit Cards: $1.00 at 1.0% interest
+  Student Loans: $1.00 at 1.0% interest
+  Car Loans: $1.00 at 11.0% interest
+  Personal Loans: $1.00 at 1.0% interest
+  Other: $11.00 at 1.0% interest
+  Total Debt: $15.00
+
+RECOMMENDATIONS:
+
+  1. Description:** Wow, that Debt-to-Income ratio of 125% is high! While it's great you're saving, your debt is a priority because of the high interest rates associated with those debts (AI Suggestion)
+     ** Wow, that Debt-to-Income ratio of 125% is high! While it's great you're 
+     saving, your debt is a priority because of the high interest rates associated 
+     with those debts. Your debt details show you have many different types of debt, 
+     some with potentially high interest rates, especially the car loan. Start by 
+     listing out ALL of your debts, with their interest rates and minimum payments. 
+     Make a *realistic* plan to tackle these debts, focusing on the car loan and the 
+     high interest portion of the other debts first. This might involve making more 
+     than the minimum payments, or even trying to negotiate lower rates. Since you're 
+     saving 100% of your income, you may want to consider putting a percentage of 
+     your savings to debt instead, that is, until you are debt free. This is the 
+     single most impactful thing you can do right now. 
+
+  2. Title:** **Re-evaluate Your Income vs (AI Suggestion)
+     Expenses** 
+
+  3. Description:** Your monthly income of $1 (AI Suggestion)
+     ** Your monthly income of $1.00 and expenses of $7.00 is a significant concern! 
+     This clearly doesn't reflect a sustainable financial situation. You either need 
+     to drastically cut back on expenses, which seems unlikely given the numbers or 
+     find ways to increase your income. Given your age and the current job market, 
+     consider ways to increase your income. Explore opportunities for side hustles, 
+     freelancing, or even a part-time job to supplement your primary income. If 
+     possible, assess your spending habits and cut back on unnecessary costs (even 
+     tiny ones) to help free up some money for your debts. Even small changes make a 
+     big difference over time. 
+
+  4. Description:** With your current situation, budgeting is essential (AI Suggestion)
+     ** With your current situation, budgeting is essential. Start with a simple 
+     budget that tracks every dollar coming in and going out. Use a budgeting app 
+     (like Mint, YNAB, or even a simple spreadsheet) to categorize your spending. The 
+     goal is to see where your money is *actually* going. Once you have a clear 
+     picture, identify areas where you can cut back to free up funds for your debt 
+     and create a financial cushion. Remember, consistency is key! Review your budget 
+     monthly (or even weekly in the beginning) and adjust as needed. 
+
+  5. Description:** Since you're building from the ground up, take advantage of free financial literacy resources (AI Suggestion)
+     ** Since you're building from the ground up, take advantage of free financial 
+     literacy resources. Your twenties are the perfect time to start learning about 
+     personal finance. Seek out books, websites, and podcasts. Look for resources 
+     about budgeting, saving, investing, and understanding debt. Many banks and 
+     credit unions offer free educational materials. The more you know, the better 
+     equipped you'll be to make smart financial decisions. Understanding how 
+     different financial products work is crucial for making informed choices in the 
+     long run. 
+
+  6. Description:** You haven't made any high-ticket purchases recently (AI Suggestion)
+     ** You haven't made any high-ticket purchases recently. This is good! Given your 
+     financial situation, it is VERY important to avoid large purchases. High-ticket 
+     purchases can derail all your hard work. Wait until your debt is significantly 
+     reduced (or ideally, paid off) before considering any significant spending. Save 
+     up for large purchases, and try to pay in cash (avoiding adding to your existing 
+     debt). 
+
+

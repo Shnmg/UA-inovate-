@@ -6,7 +6,10 @@ from datetime import datetime
 import csv
 import os
 import re
+import sys
 import google.generativeai as genai
+import logging
+from spending_ai import FinancialSummaryGenerator
 
 # IMPORTANT: Replace "YOUR_API_KEY" with your actual key
 # Consider using environment variables for better security in real projects
@@ -732,64 +735,120 @@ def convert_csv(input_file, output_file=None):
         return None
 
 def main():
-    print("=" * 50)
-    print("FINANCIAL ANALYZER")
-    print("=" * 50)
-    print("This program will help you analyze your financial situation and generate\n"
-          "a summary with personalized recommendations for better money management.")
+    # --- Argument Handling --- 
+    csv_file_path_arg = None
+    if len(sys.argv) > 1:
+        csv_file_path_arg = sys.argv[1]
+        # Basic check if the argument looks like a path (optional)
+        if not os.path.exists(csv_file_path_arg) or not csv_file_path_arg.lower().endswith('.csv'):
+            # Log error to stderr if running non-interactively and path is bad
+            print(f"Error: Invalid or non-existent CSV path provided: {csv_file_path_arg}", file=sys.stderr)
+            sys.exit(1) # Exit if bad path provided via argument
+
+    # --- Conditional Output Control --- 
+    # Only print prompts/titles if NOT run with a CSV argument (i.e., interactive mode)
+    is_interactive = csv_file_path_arg is None
+
+    if is_interactive:
+        print("=" * 50)
+        print("FINANCIAL ANALYZER")
+        print("=" * 50)
+        print("This program will help you analyze your financial situation and generate\n"
+              "a summary with personalized recommendations for better money management.")
     
-    # Create an instance of the flowchart generator
-    generator = FinancialFlowchartGenerator()
+    # Create an instance of the analysis class
+    generator = FinancialSummaryGenerator()
     
-    # Choose data input method
-    print("\nHow would you like to input your financial data?")
-    print("1. Enter data manually")
-    print("2. Import from CSV file")
-    print("3. Convert and import any CSV file")
-    
-    choice = input("Enter your choice (1, 2, or 3): ")
-    
-    if choice == "1":
-        generator.collect_user_data()
-    elif choice == "2":
-        csv_path = input("Enter the path to your CSV file: ")
-        if os.path.exists(csv_path):
-            generator.import_from_csv(csv_path)
-        else:
-            print("File not found. Falling back to manual input.")
-            generator.collect_user_data()
-    elif choice == "3":
-        csv_path = input("Enter the path to your CSV file: ")
-        if os.path.exists(csv_path):
-            converted_path = convert_csv(csv_path)
-            if converted_path:
-                generator.import_from_csv(converted_path)
-            else:
-                print("CSV conversion failed. Falling back to manual input.")
+    # --- Data Input --- 
+    user_data = None
+    if csv_file_path_arg:
+        # Load directly from CSV provided via argument
+        try:
+            user_data = generator.import_from_csv(csv_file_path_arg)
+        except FileNotFoundError:
+            print(f"Error: CSV file not found at: {csv_file_path_arg}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error processing CSV file {csv_file_path_arg}: {e}", file=sys.stderr)
+            sys.exit(1)
+    else: # Interactive mode
+        if is_interactive:
+             print("\nHow would you like to input your financial data?")
+             print("1. Enter data manually")
+             print("2. Import from standard CSV file")
+             print("3. Convert and import any CSV file")
+        
+        while True:
+            if is_interactive:
+                choice = input("Enter your choice (1, 2, or 3): ")
+            else: # Should not happen if logic is correct, but as fallback
+                choice = '1' 
+
+            if choice == '1':
                 generator.collect_user_data()
+                user_data = generator.user_data
+                break
+            elif choice == '2':
+                if is_interactive:
+                    csv_file_path = input("Enter the path to your standard CSV file: ")
+                else:
+                     # Should not be reached if csv_file_path_arg was set
+                     print("Error: Interactive choice selected in non-interactive mode.", file=sys.stderr)
+                     sys.exit(1)
+                try:
+                    user_data = generator.import_from_csv(csv_file_path)
+                    break
+                except FileNotFoundError:
+                     if is_interactive: print("File not found. Please check the path and try again.")
+                     else: sys.exit(1)
+                except Exception as e:
+                     if is_interactive: print(f"Error processing CSV: {e}")
+                     else: 
+                         print(f"Error processing CSV {csv_file_path}: {e}", file=sys.stderr)
+                         sys.exit(1)
+            # Removed choice 3 for simplicity when called from C#
+            # elif choice == '3': 
+            #     # ... (keep convert_and_import logic if needed for interactive use) ...
+            #     pass 
+            else:
+                 if is_interactive: print("Invalid choice. Please enter 1, 2, or 3.")
+
+    # --- Analysis and Output --- 
+    if user_data:
+        generator.user_data = user_data
+        generator.analyze_data()
+        generator.generate_ai_recommendations()
+
+        if is_interactive:
+            # Print full report in interactive mode
+            print("\n===== FINANCIAL ANALYSIS REPORT =====")
+            # ... (print the detailed breakdown: income, expenses, savings, debt etc.) ...
+            # Example (needs fleshing out based on your FinancialSummaryGenerator details):
+            print(f"\nMonthly Income: ${generator.user_data.get('income', {}).get('monthly_income', 0):,.2f}")
+            # ... print other sections ...
+            print("\nFINANCIAL RECOMMENDATIONS:")
+            for i, rec in enumerate(generator.recommendations):
+                print(f"\n{i+1}. {rec['title']} ({rec['category']})")
+                print(f"   {rec['description']}")
+            # Save to file (optional for interactive)
+            try:
+                with open("financial_summary.txt", "w") as f:
+                    # Write the full report here if desired
+                    f.write("===== FINANCIAL ANALYSIS REPORT =====\n")
+                    # ... write details ...
+                    f.write("\nFINANCIAL RECOMMENDATIONS:\n")
+                    for i, rec in enumerate(generator.recommendations):
+                        f.write(f"\n{i+1}. {rec['title']} ({rec['category']})\n")
+                        f.write(f"   {rec['description']}\n")
+                print("\nThank you for using the Financial Analyzer!")
+                print("Your financial summary has been saved as 'financial_summary.txt'.")
+            except IOError as e:
+                print(f"\nWarning: Could not save summary to file: {e}")
         else:
-            print("File not found. Falling back to manual input.")
-            generator.collect_user_data()
-    else:
-        print("Invalid choice. Falling back to manual input.")
-        generator.collect_user_data()
-    
-    # Analyze the financial data
-    generator.analyze_data()
-    
-    # Generate recommendations
-    generator.generate_ai_recommendations()
-    
-    # Generate textual report
-    generator.generate_report()
-    
-    # Generate and save summary
-    summary_file = generator.generate_summary()
-    
-    print("\nThank you for using the Financial Analyzer!")
-    print(f"Your financial summary has been saved as '{summary_file}'.")
-    print("Use this summary along with the recommendations to improve your financial literacy and money management skills.")
+            # Only print recommendations to stdout when run non-interactively
+            for i, rec in enumerate(generator.recommendations):
+                print(f"\n{i+1}. {rec['title']} ({rec['category']})")
+                print(f"   {rec['description']}")
 
 if __name__ == "__main__":
     main()
-    

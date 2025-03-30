@@ -4,7 +4,8 @@ import sqlite3
 import datetime
 from collections import defaultdict
 from contextlib import closing
-import os  # Added for path handling
+import os  
+import tempfile# Added for path handling
 
 # --- AI Integration ---
 # Assuming Main.py is in a 'Scripts' subfolder relative to this file
@@ -18,10 +19,17 @@ scripts_dir = os.path.join(current_dir, "Scripts")
 # Add the Scripts directory to the Python path
 if scripts_dir not in sys.path:
     sys.path.insert(0, scripts_dir)
+    print(f"DEBUG: Added {scripts_dir} to sys.path")
+else:
+    print(f"DEBUG: {scripts_dir} already in sys.path")
 
+print(f"DEBUG: Current sys.path: {sys.path}") # Verify the path list
+
+FinancialSummaryGenerator = None 
 try:
     # Now import the required class and functions from Main.py
-    from Main import FinancialSummaryGenerator, GOOGLE_API_KEY
+    from Main import FinancialSummaryGenerator, GOOGLE_API_KEY, AI_ENABLED, convert_csv
+
 
     print("Successfully imported FinancialSummaryGenerator from Main.py")
     if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_API_KEY":
@@ -34,7 +42,11 @@ try:
 except ImportError as e:
     print(f"Error importing from Main.py: {e}")
     print("AI recommendations will be disabled.")
-
+    print("Warning: convert_csv function not found in Main.py. CSV conversion might not work.")
+    def convert_csv(input_file, output_file=None):
+        print("Placeholder convert_csv: Returning input path.")
+        if output_file: return output_file
+        return input_file
     # Define a placeholder class if import fails
     class FinancialSummaryGenerator:
         def __init__(self):
@@ -930,7 +942,94 @@ def get_transactions(user_id):
         app.logger.error(f"Failed to get transactions for user {user_id}: {e}")
         return jsonify({"status": "error", "message": "Could not retrieve transactions"}), 500
 
+@app.route('/analyze_csv', methods=['POST'])
+def analyze_csv():
+    """
+    Handles CSV file upload, analyzes it using FinancialSummaryGenerator,
+    and returns AI recommendations.
+    """
+    if 'csv_file' not in request.files:
+        return jsonify({"status": "error", "message": "No CSV file part in the request"}), 400
 
+    file = request.files['csv_file']
+    user_id = request.form.get('user_id', '1') # Get user ID from form data, default to '1'
+
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "No selected file"}), 400
+
+    if file and file.filename.endswith('.csv'):
+        # --- Securely save the uploaded file temporarily ---
+        temp_dir = tempfile.mkdtemp() # Create a temporary directory
+        temp_filepath = os.path.join(temp_dir, file.filename)
+        try:
+            file.save(temp_filepath)
+            app.logger.info(f"CSV file saved temporarily to: {temp_filepath}")
+
+            # --- Initialize Generator ---
+            generator = FinancialSummaryGenerator()
+
+            # --- Attempt to Convert and Import ---
+            # Optional: Convert if your CSV might not be in the exact expected format
+            # converted_filepath = convert_csv(temp_filepath) # convert_csv should handle naming
+            # if not converted_filepath:
+            #     raise ValueError("CSV conversion failed.")
+            # app.logger.info(f"CSV converted (if necessary) to: {converted_filepath}")
+
+            # Import data using the potentially converted path
+            # success = generator.import_from_csv(converted_filepath) 
+
+            # --- OR Import Directly (if conversion is not needed or handled elsewhere) ---
+            success = generator.import_from_csv(temp_filepath) # Use the direct temp path
+
+            if not success:
+                raise ValueError("Failed to import data from CSV.")
+
+            # --- Perform Analysis & Get Recommendations ---
+            generator.analyze_data()
+            generator.generate_ai_recommendations() # This populates generator.recommendations [cite: 3]
+
+            recommendations = generator.recommendations if hasattr(generator, 'recommendations') else []
+            app.logger.info(f"Generated {len(recommendations)} recommendations for user {user_id} from CSV.")
+
+            # --- Cleanup: Remove temporary file and directory ---
+            os.remove(temp_filepath)
+            # if converted_filepath != temp_filepath: # Remove converted file if different
+            #     os.remove(converted_filepath) 
+            os.rmdir(temp_dir)
+
+            # --- Return Success Response ---
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "user_id": user_id, # Include user ID in response if useful
+                    "recommendations": recommendations 
+                }
+            }), 200
+
+        except Exception as e:
+             # --- Cleanup on Error ---
+             if os.path.exists(temp_filepath):
+                 os.remove(temp_filepath)
+             # if 'converted_filepath' in locals() and os.path.exists(converted_filepath):
+             #     os.remove(converted_filepath)
+             if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+
+             app.logger.error(f"CSV Analysis failed: {e}", exc_info=True)
+             return jsonify({"status": "error", "message": f"An error occurred during analysis: {e}"}), 500
+        finally:
+             # Ensure cleanup happens even if unexpected errors occur before explicit removal
+             if os.path.exists(temp_dir):
+                try:
+                    if os.path.exists(temp_filepath): os.remove(temp_filepath)
+                    # if 'converted_filepath' in locals() and os.path.exists(converted_filepath): os.remove(converted_filepath)
+                    os.rmdir(temp_dir)
+                except OSError as cleanup_error:
+                    app.logger.error(f"Error during temp directory cleanup: {cleanup_error}")
+
+
+    else:
+        return jsonify({"status": "error", "message": "Invalid file type. Please upload a .csv file"}), 400
 # --- Main Execution ---
 if __name__ == "__main__":
     # Configure logging

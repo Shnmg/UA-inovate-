@@ -191,6 +191,25 @@
         </div>
     </div>
 
+    <div class="container">
+        <h2>Analyze CSV File</h2>
+        <form id="csv-upload-form">
+            <label for="csv-file-input">Select CSV File:</label>
+            <input type="file" id="csv-file-input" name="csv_file" accept=".csv" required>
+            <br><br>
+            <label for="csv-user-id">User ID (for context, if applicable):</label>
+            <input type="number" id="csv-user-id" name="user_id" value="1"> 
+            <br><br>
+            <button type="submit">Upload and Analyze</button>
+        </form>
+        <h3>CSV Analysis Recommendations:</h3>
+        <div id="csv-recommendations-container">
+            <div id="csv-status" class="response-status">Upload a CSV to see recommendations...</div>
+            <ul id="csv-recommendations-list"></ul>
+        </div>
+        <pre id="csv-error" class="error hidden"></pre> 
+    </div>
+
     <!-- Transaction History Section -->
     <div class="container">
         <h2>Transaction History</h2>
@@ -269,6 +288,183 @@
                 <!-- Category breakdown will be populated by JavaScript --> 
             </div>
         </div>
+        <div class="container">
+            <h2 class="section-title">Analyze CSV File</h2>
+            <form id="csv-upload-form" class="upload-form">
+                <div class="form-group">
+                    <label for="csv-file-input" class="form-label">Select CSV File:</label>
+                    <input type="file" id="csv-file-input" name="csv_file" accept=".csv" required class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="csv-user-id" class="form-label">User ID (optional):</label>
+                    <input type="number" id="csv-user-id" name="user_id" value="1" class="form-control">
+                    <small class="form-text text-muted">Enter your user ID for personalized recommendations.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload and Analyze</button>
+            </form>
+        
+            <div class="analysis-results mt-4">
+                <div id="csv-status" class="status-message">Upload a CSV to see recommendations...</div>
+                <div id="csv-recommendations-container" class="recommendations-container">
+                    <h3 class="recommendations-title">AI Financial Recommendations</h3>
+                    <div id="csv-recommendations-list" class="recommendations-list"></div>
+                </div>
+            </div>
+            <div id="csv-error" class="error-message hidden"></div>
+        </div>
+        
+        <style>
+            .container {
+                max-width: 1200px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+        
+            .section-title {
+                color: #333;
+                margin-bottom: 2rem;
+                font-size: 1.8rem;
+            }
+        
+            .upload-form {
+                background: #fff;
+                padding: 2rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                margin-bottom: 2rem;
+            }
+        
+            .form-group {
+                margin-bottom: 1.5rem;
+            }
+        
+            .form-label {
+                display: block;
+                margin-bottom: 0.5rem;
+                color: #444;
+                font-weight: 600;
+            }
+        
+            .form-control {
+                width: 100%;
+                padding: 0.8rem;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 1rem;
+                transition: border-color 0.3s ease;
+            }
+        
+            .form-control:focus {
+                outline: none;
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            }
+        
+            .form-text {
+                font-size: 0.9rem;
+                margin-top: 0.25rem;
+            }
+        
+            .btn {
+                padding: 0.8rem 1.5rem;
+                border-radius: 5px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+        
+            .btn-primary {
+                background-color: #007bff;
+                border-color: #007bff;
+                color: white;
+            }
+        
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #0056b3;
+            }
+        
+            .analysis-results {
+                background: #fff;
+                padding: 2rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+        
+            .status-message {
+                color: #666;
+                font-size: 1.1rem;
+                text-align: center;
+                margin-bottom: 1rem;
+            }
+        
+            .recommendations-title {
+                color: #333;
+                margin-bottom: 1.5rem;
+                font-size: 1.5rem;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 0.5rem;
+            }
+        
+            .recommendations-list {
+                list-style: none;
+                padding: 0;
+            }
+        
+            .recommendations-list li {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+                border-left: 4px solid #007bff;
+                transition: all 0.3s ease;
+            }
+        
+            .recommendations-list li:hover {
+                background: #f1f8ff;
+                transform: translateX(5px);
+            }
+        
+            .recommendations-list li strong {
+                color: #2c3e50;
+                font-size: 1.1rem;
+                display: block;
+                margin-bottom: 0.5rem;
+            }
+        
+            .recommendations-list li span {
+                color: #3498db;
+                font-weight: 600;
+            }
+        
+            .error-message {
+                color: #dc3545;
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                border-radius: 5px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+        
+            .hidden {
+                display: none;
+            }
+        
+            @media (max-width: 768px) {
+                .container {
+                    padding: 0 0.5rem;
+                }
+        
+                .section-title {
+                    font-size: 1.5rem;
+                }
+        
+                .recommendations-list li {
+                    padding: 1rem;
+                }
+            }
+        </style>
+
+        
         
         <!-- Transaction History Table -->
         <div id="transaction-history-container">
@@ -633,6 +829,79 @@
         function viewTransactionDetails(transactionId) {
             alert(`View details for transaction ${transactionId} (This would open a detailed view in a production app)`);  
         }
+
+        const csvUploadForm = document.getElementById('csv-upload-form');
+const csvFileInput = document.getElementById('csv-file-input');
+const csvRecommendationsList = document.getElementById('csv-recommendations-list');
+const csvStatus = document.getElementById('csv-status');
+const csvError = document.getElementById('csv-error');
+const csvUserIdInput = document.getElementById('csv-user-id'); // Get user ID input
+
+csvUploadForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const file = csvFileInput.files[0];
+    const userId = csvUserIdInput.value; // Get the user ID
+
+    if (!file) {
+        csvStatus.textContent = 'Please select a CSV file.';
+        csvError.classList.add('hidden');
+        return;
+    }
+
+    // Display loading status
+    csvStatus.textContent = 'Uploading and analyzing CSV...';
+    csvRecommendationsList.innerHTML = ''; // Clear previous recommendations
+    csvError.classList.add('hidden');
+
+    // Create FormData to send the file
+    const formData = new FormData();
+    formData.append('csv_file', file);
+    // Append user_id if your backend endpoint needs it
+    if (userId) {
+         formData.append('user_id', userId);
+    }
+
+    try {
+        // *** Make sure '/analyze_csv' matches the new endpoint in spending_ai.py ***
+        const response = await fetch('/analyze_csv', { 
+            method: 'POST',
+            body: formData // Send file using FormData
+            // No 'Content-Type' header needed; browser sets it for FormData
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Analysis failed');
+        }
+
+        // Display recommendations
+        const recommendations = result.data.recommendations;
+        if (recommendations && recommendations.length > 0) {
+            csvStatus.classList.add('hidden'); // Hide status message
+            recommendations.forEach(rec => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<strong><span class="math-inline">\{rec\.title\} \(</span>{rec.category || 'AI Suggestion'}):</strong> ${rec.description}`;
+                csvRecommendationsList.appendChild(listItem);
+            });
+        } else {
+            csvStatus.textContent = 'No recommendations generated from the CSV.';
+            csvStatus.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        csvStatus.textContent = 'Error during analysis.';
+        csvError.textContent = `Error: ${error.message}`;
+        csvError.classList.remove('hidden');
+        csvStatus.classList.add('hidden');
+    } finally {
+        // Optional: Clear the file input after processing
+        // csvFileInput.value = ''; 
+    }
+
+
+});
     </script>
 
 </body>
