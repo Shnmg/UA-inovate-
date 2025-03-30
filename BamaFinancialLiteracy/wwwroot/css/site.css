@@ -1,0 +1,76 @@
+/* wwwroot/css/site.css */
+body {
+  background-image: url('/images/bama-background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  min-height: 100vh;
+  margin: 0;
+  filter: saturate(1.15) contrast(1.1);
+  position: relative;
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.navbar-brand img {
+  transition: transform 0.3s ease;
+}
+
+.navbar-brand img:hover {
+  transform: scale(1.05);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    35deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  z-index: 1;
+}
+
+.container {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.05);
+  padding: 2.5rem;
+  margin: 2rem auto;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.container:hover {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 2px rgba(255, 255, 255, 0.4) inset;
+}
+
+.btn-crimson {
+  background: #9E1B32;
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-crimson:hover {
+  background: #87152a;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
