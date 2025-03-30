@@ -1,0 +1,180 @@
+@model List<FinancialLiteracyApp.Models.Transaction>
+
+@{
+    ViewData["Title"] = "Spending Analysis Results";
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        <img src="/images/bama-logo.png" alt="Alabama Logo" width="60" class="me-3">
+        <h1 class="display-4 mb-0">AI Spending Analysis</h1>
+    </div>
+    
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-crimson text-white">
+                    <h3 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Summary</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stats-card text-center p-3 border rounded bg-light">
+                                <h4 class="text-crimson">Total Transactions</h4>
+                                <p class="display-4">@Model.Count</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center p-3 border rounded bg-light">
+                                <h4 class="text-crimson">Total Spent</h4>
+                                <p class="display-4">$@Model.Sum(t => t.Amount).ToString("N2")</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center p-3 border rounded bg-light">
+                                <h4 class="text-crimson">Impulsive Purchases</h4>
+                                <p class="display-4">@Model.Count(t => t.Flagged)</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card text-center p-3 border rounded bg-light">
+                                <h4 class="text-crimson">Most Common</h4>
+                                @{
+                                    var topCategory = Model.GroupBy(t => t.Category)
+                                        .OrderByDescending(g => g.Count())
+                                        .FirstOrDefault()?.Key ?? "None";
+                                }
+                                <p class="display-4">@topCategory</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-crimson text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0"><i class="fas fa-list-ul me-2"></i>Transaction Analysis</h3>
+            <div>
+                <a href="@Url.Action("Analyze")" class="btn btn-light btn-sm">
+                    <i class="fas fa-upload me-1"></i> Upload Another CSV
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>AI Analysis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var transaction in Model)
+                        {
+                            <tr>
+                                <td>@transaction.Timestamp.ToString("g")</td>
+                                <td>
+                                    <span class="badge bg-@GetCategoryColor(transaction.Category)">
+                                        @transaction.Category
+                                    </span>
+                                </td>
+                                <td class="fw-bold">$@transaction.Amount.ToString("N2")</td>
+                                <td>
+                                    @if (transaction.Flagged)
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Impulsive
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i> Planned
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" data-bs-target="#analysisModal-@transaction.Id">
+                                        <i class="fas fa-brain me-1"></i> View Analysis
+                                    </button>
+                                    
+                                    <!-- Analysis Modal -->
+                                    <div class="modal fade" id="analysisModal-@transaction.Id" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-crimson text-white">
+                                                    <h5 class="modal-title">
+                                                        AI Analysis: $@transaction.Amount.ToString("N2") (@transaction.Category)
+                                                    </h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <h6 class="text-muted mb-2">Advice</h6>
+                                                        <p class="fs-5">@(transaction.AnalysisAdvice ?? "No advice available.")</p>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <h6 class="text-muted mb-2">Impact</h6>
+                                                        <p>@(transaction.AnalysisImpact ?? "No impact assessment available.")</p>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <h6 class="text-muted mb-2">Tags</h6>
+                                                        @if (transaction.AnalysisTags != null && transaction.AnalysisTags.Any())
+                                                        {
+                                                            foreach (var tag in transaction.AnalysisTags)
+                                                            {
+                                                                <span class="badge bg-light text-dark border me-1 mb-1">@tag</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <p>No tags available.</p>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetCategoryColor(string category)
+    {
+        return category?.ToLower() switch
+        {
+            "groceries" => "success",
+            "transport" => "primary",
+            "utilities" => "info",
+            "entertainment" => "danger",
+            "dining" => "warning",
+            "shopping" => "secondary",
+            "subscription" => "info",
+            _ => "light"
+        };
+    }
+}

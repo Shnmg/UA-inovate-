@@ -20,17 +20,27 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow">
-                <div class="card-body">
-                    <h3><i class="fas fa-file-import text-crimson"></i> CSV Import</h3>
-                    <p>Upload a CSV file containing your financial transactions.</p>
-                    <form asp-action="ImportCsv" method="post" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <input type="file" name="file" class="form-control" accept=".csv" required />
+                <div class="card-body text-center">
+                    <h3><i class="fas fa-chart-pie text-crimson"></i> Spending AI Tools</h3>
+                    <p>Use our advanced AI tools to analyze your spending habits, detect impulsive purchases, and get personalized financial recommendations.</p>
+                    <p class="mb-4">Our AI-powered tools can help you:</p>
+                    <div class="row mb-4 text-start">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle text-success me-2"></i> Track spending by category</li>
+                                <li><i class="fas fa-check-circle text-success me-2"></i> Identify impulsive purchases</li>
+                            </ul>
                         </div>
-                        <button type="submit" class="btn btn-crimson btn-lg">
-                            <i class="fas fa-upload"></i> Import CSV
-                        </button>
-                    </form>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check-circle text-success me-2"></i> Get AI recommendations</li>
+                                <li><i class="fas fa-check-circle text-success me-2"></i> View spending patterns</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <a href="@Url.Action("IntegratedTools")" class="btn btn-crimson btn-lg">
+                        <i class="fas fa-robot me-2"></i> Launch Spending AI Tools
+                    </a>
                 </div>
             </div>
         </div>

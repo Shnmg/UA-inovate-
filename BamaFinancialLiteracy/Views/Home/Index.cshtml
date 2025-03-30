@@ -27,13 +27,13 @@
                     </h3>
                     <div class="d-grid gap-3 mt-4">
                         <!-- Finance 101 Button -->
-                        <button class="btn btn-crimson btn-lg text-white text-decoration-none" onclick="window.location.href='/Home/Finance101';">
+                        <button class="btn btn-crimson btn-lg text-white text-decoration-none"
+                            onclick="window.location.href='/Home/Finance101';">
                             <i class="fas fa-book-open"></i> Finance 101
                         </button>
-                        <!-- CSV Import Button (modal trigger) -->
-                        <button class="btn btn-outline-crimson btn-lg" data-bs-toggle="modal" data-bs-target="#csvModal">
-                            <i class="fas fa-file-import"></i> Analyze Your Spending (AI): CSV
-                        </button>
+                        <a href="@Url.Action("Analyze", "Home")" class="btn btn-outline-crimson btn-lg">
+                            <i class="fas fa-chart-line"></i> Analyze Your Spending (AI)
+                        </a>
                     </div>
                 </div>
             </div>
@@ -72,18 +72,29 @@
         color: white;
         border: 2px solid #000;
     }
+
     .btn-crimson:hover {
         background-color: #7a1426;
         color: white;
     }
+
     .btn-outline-crimson {
         color: #9E1B32;
         border: 2px solid #9E1B32;
     }
+
     .btn-outline-crimson:hover {
         background-color: #9E1B32;
         color: white;
     }
-    .text-crimson { color: #9E1B32; }
-    .bg-crimson { background-color: #9E1B32; }
+
+    .text-crimson {
+        color: #9E1B32;
+    }
+
+    .bg-crimson {
+        background-color: #9E1B32;
+    }
 </style>
+
+
