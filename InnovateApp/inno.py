@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 import datetime
 from collections import defaultdict
+from contextlib import closing
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False  # For proper emoji display
@@ -12,517 +13,589 @@ VALID_CATEGORIES = ['groceries', 'transport', 'utilities', 'entertainment',
 ESSENTIAL_CATEGORIES = ['groceries', 'transport', 'utilities']
 
 def create_db():
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('spending_ai.db') as conn:
+        cursor = conn.cursor()
+        
+        # Users table with streak tracking
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                streak_days INTEGER DEFAULT 0,
+                last_transaction_date DATE
+            )
+        ''')
+
+        # Transactions table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                category TEXT NOT NULL,
+                timestamp DATETIME NOT NULL,
+                flagged BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+
+        # Cooldowns table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cooldowns (
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                expires_at DATETIME NOT NULL,
+                PRIMARY KEY (user_id, category),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+
+        # Budgets table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS budgets (
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                monthly_limit REAL NOT NULL,
+                current_spend REAL DEFAULT 0,
+                PRIMARY KEY (user_id, category),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+
+        # Spending patterns (for heatmap)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS spending_patterns (
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                day_of_week INTEGER NOT NULL,
+                hour_of_day INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                timestamp DATETIME NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+
+        # Create indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_transactions_flagged ON transactions(flagged)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON transactions(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_spending_patterns_user ON spending_patterns(user_id)')
+
+def validate_input(data, required_fields):
+    """Validate and sanitize input data"""
+    if not isinstance(data, dict):
+        raise ValueError("Input must be a JSON object")
     
-    # Users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT,
-            streak_days INTEGER DEFAULT 0
-        )
-    ''')
+    missing = [field for field in required_fields if field not in data]
+    if missing:
+        raise ValueError(f"Missing required fields: {', '.join(missing)}")
+    
+    return {k: v.strip() if isinstance(v, str) else v for k, v in data.items()}
 
-    # Transactions
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            amount REAL,
-            category TEXT,
-            mood TEXT,
-            timestamp DATETIME,
-            flagged BOOLEAN,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+def validate_category(category):
+    """Validate and normalize category"""
+    category = category.lower().strip()
+    if category not in VALID_CATEGORIES:
+        raise ValueError(f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}")
+    return category
 
-    # Cooldowns
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS cooldowns (
-            user_id INTEGER,
-            category TEXT,
-            expires_at DATETIME,
-            PRIMARY KEY (user_id, category),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+def validate_amount(amount):
+    """Validate and convert amount to float"""
+    try:
+        amount = float(str(amount).replace(',', '.'))
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+        return amount
+    except (ValueError, TypeError):
+        raise ValueError("Invalid amount format")
 
-    # Budgets
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS budgets (
-            user_id INTEGER,
-            category TEXT,
-            monthly_limit REAL,
-            current_spend REAL DEFAULT 0,
-            PRIMARY KEY (user_id, category),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+def validate_timestamp(timestamp_str=None):
+    """Validate and return timezone-aware timestamp
+    
+    Args:
+        timestamp_str: Optional timestamp string in format YYYY-MM-DD HH:MM:SS
+        
+    Returns:
+        datetime: Timezone-aware datetime object (UTC if no timezone specified)
+        
+    Raises:
+        ValueError: If timestamp format is invalid
+    """
+    if timestamp_str:
+        try:
+            # First try parsing with timezone info if present
+            try:
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S%z")
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+                return timestamp
+            except ValueError:
+                # Fall back to parsing without timezone
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                return timestamp.replace(tzinfo=datetime.timezone.utc)
+        except ValueError:
+            raise ValueError("Invalid timestamp format. Use YYYY-MM-DD HH:MM:SS")
+    # Return current UTC time if no timestamp provided
+    return datetime.datetime.now(datetime.timezone.utc)
 
-    # Spending patterns (for heatmap)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS spending_patterns (
-            user_id INTEGER,
-            category TEXT,
-            day_of_week INTEGER,
-            hour_of_day INTEGER,
-            amount REAL,
-            timestamp DATETIME,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
+def detect_behavioral_context(user_id, transaction):
+    """Detects spending contexts for non-essential categories only"""
+    if transaction['category'] in ESSENTIAL_CATEGORIES:
+        return []
+    
+    with sqlite3.connect('spending_ai.db') as conn:
+        cursor = conn.cursor()
+        triggers = []
+        
+        # Late-night spending (10PM-4AM)
+        if 22 <= transaction['timestamp'].hour or transaction['timestamp'].hour <= 4:
+            triggers.append("late_night_purchase")
+        
+        # Rapid-fire transactions (3+ in 1 hour)
+        placeholders = ','.join(['?']*len(ESSENTIAL_CATEGORIES))
+        query = f'''
+            SELECT COUNT(*) FROM transactions 
+            WHERE user_id=? AND category NOT IN ({placeholders}) 
+            AND timestamp > datetime(?, '-1 hour')
+        '''
+        cursor.execute(query, [user_id] + ESSENTIAL_CATEGORIES + [transaction['timestamp']])
+        if cursor.fetchone()[0] >= 2:
+            triggers.append("rapid_fire_spending")
+        
+        # High-frequency categories (5+ same category/week)
+        cursor.execute('''
+            SELECT COUNT(*) FROM transactions
+            WHERE user_id=? AND category=?
+            AND timestamp > datetime(?, '-7 days')
+        ''', (user_id, transaction['category'], transaction['timestamp']))
+        if cursor.fetchone()[0] >= 4:
+            triggers.append("high_frequency_category")
+        
+        return triggers
 
-    conn.commit()
-    conn.close()
-
-# Helper Functions
-def is_impulsive(user_id, amount, category, mood, timestamp):
+def is_impulsive(user_id, amount, category, timestamp):
+    """Determines if a transaction is impulsive - never for essentials"""
     if category in ESSENTIAL_CATEGORIES:
         return False
         
-    if isinstance(timestamp, str):
-        dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-    else:
-        dt = timestamp
+    behavioral_triggers = detect_behavioral_context(user_id, {
+        'timestamp': timestamp,
+        'category': category
+    })
+    
+    # Decision matrix with clear thresholds
+    if "late_night_purchase" in behavioral_triggers and amount > 20:
+        return True
+    if "rapid_fire_spending" in behavioral_triggers and amount > 30:
+        return True
+    if "high_frequency_category" in behavioral_triggers and amount > 50:
+        return True
         
-    hour = dt.hour
-    is_late_night = hour >= 22 or hour <= 4
-    
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
-    
-    # Same-day spending
-    cursor.execute('''
-        SELECT COUNT(*) FROM transactions 
-        WHERE user_id=? AND date(timestamp)=date(?)
-    ''', (user_id, dt))
-    daily_transactions = cursor.fetchone()[0]
-    
-    # Recent purchases
-    cursor.execute('''
-        SELECT COUNT(*) FROM transactions 
-        WHERE user_id=? AND timestamp > datetime(?, '-1 hour')
-    ''', (user_id, dt))
-    recent_transactions = cursor.fetchone()[0]
-    
-    is_stressed = mood and "stress" in mood.lower()
-    
-    # Category-specific rules
-    if category == 'entertainment':
-        flagged = amount > 50 or (is_late_night and amount > 20)
-    elif category == 'shopping':
-        flagged = amount > 75 or (is_stressed and amount > 30)
-    else:
-        flagged = (
-            (is_late_night and amount > 20) or
-            (amount > 50 and recent_transactions >= 2) or
-            (is_stressed and amount > 30) or
-            (daily_transactions > 5 and amount > 10)
-        )
-    
-    conn.close()
-    return flagged
+    return False
 
-def detect_recurring(user_id, category, amount):
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT amount, COUNT(*) as count 
-        FROM transactions 
-        WHERE user_id=? AND category=?
-        AND timestamp > datetime('now', '-30 days')
-        GROUP BY amount
-        HAVING count >= 2
-        ORDER BY count DESC
-    ''', (user_id, category))
-    
-    for rec_amount, count in cursor.fetchall():
-        if abs(rec_amount - amount) <= (rec_amount * 0.15):
-            return True, rec_amount
-    return False, None
+def get_future_projections(user_id):
+    with sqlite3.connect('spending_ai.db') as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                category,
+                SUM(amount) as total_spend,
+                COUNT(*) as transaction_count
+            FROM transactions
+            WHERE user_id = ? 
+            AND timestamp > datetime('now', '-3 months')
+            GROUP BY category
+        ''', (user_id,))
+        
+        projections = {}
+        for category, total, count in cursor.fetchall():
+            if count >= 3 and total >= 50:  # Only include significant categories
+                avg_monthly = total / 3
+                projections[category] = {
+                    "avg_monthly": round(avg_monthly, 2),
+                    "projected_yearly": round(avg_monthly * 12, 2),
+                    "potential_investment": round(avg_monthly * 12 * (1.07 ** 5), 2)
+                }
+        
+        return projections
 
-# API Endpoints
+def get_cool_down_suggestions(user_id, current_category=None):
+    """Generates suggestions only for non-essential categories"""
+    if current_category in ESSENTIAL_CATEGORIES:
+        return []
+    
+    with sqlite3.connect('spending_ai.db') as conn:
+        cursor = conn.cursor()
+        suggestions = []
+        
+        # Time-based patterns
+        placeholders = ','.join(['?']*len(ESSENTIAL_CATEGORIES))
+        query = f'''
+            SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
+            FROM transactions 
+            WHERE user_id = ? AND flagged = 1
+            AND category NOT IN ({placeholders})
+            GROUP BY hour
+            ORDER BY count DESC
+            LIMIT 1
+        '''
+        cursor.execute(query, [user_id] + ESSENTIAL_CATEGORIES)
+        peak_hour = cursor.fetchone()
+        
+        if peak_hour:
+            hour, count = peak_hour
+            suggestions.append(f"⏰ Your impulsive purchases often occur around {int(hour)}:00")
+        
+        # Category-specific suggestions
+        if current_category:
+            cursor.execute('''
+                SELECT AVG(amount) as avg_amount
+                FROM transactions
+                WHERE user_id = ? AND category = ? AND flagged = 1
+            ''', (user_id, current_category))
+            category_avg = cursor.fetchone()
+            
+            if category_avg and category_avg[0]:
+                suggestions.append(
+                    f"🛑 For {current_category}, consider waiting when amount exceeds ${category_avg[0]:.2f}"
+                )
+        
+        return suggestions
+
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-    
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
-    
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
-    
     try:
-        cursor.execute('''
-            INSERT INTO users (username, password) 
-            VALUES (?, ?)
-        ''', (username, password))
-        conn.commit()
-        return jsonify({"message": "User registered successfully!"}), 201
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Username already exists"}), 400
-    finally:
-        conn.close()
+        data = validate_input(request.get_json(), ['username', 'password'])
+        username = data['username']
+        password = data['password']
+        
+        with sqlite3.connect('spending_ai.db') as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', 
+                             (username, password))
+                conn.commit()
+                return jsonify({
+                    "status": "success",
+                    "message": "User registered successfully",
+                    "user_id": cursor.lastrowid
+                }), 201
+            except sqlite3.IntegrityError:
+                return jsonify({
+                    "status": "error",
+                    "message": "Username already exists"
+                }), 400
+                
+    except ValueError as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }), 500
 
 @app.route('/add_transaction', methods=['POST'])
 def add_transaction():
-    # Debugging: Print raw request data
-    print("\n=== New Transaction Request ===")
-    print("Headers:", dict(request.headers))
-    print("Raw data:", request.data.decode('utf-8'))
-    
     try:
-        data = request.get_json()
-        if data is None:
-            return jsonify({"error": "Invalid or empty JSON"}), 400
+        # Validate and parse input
+        data = validate_input(request.get_json(), ['user_id', 'amount', 'category'])
+        user_id = int(data['user_id'])
+        amount = validate_amount(data['amount'])
+        category = validate_category(data['category'])
+        timestamp = validate_timestamp(data.get('timestamp'))
+        
+        with sqlite3.connect('spending_ai.db') as conn:
+            cursor = conn.cursor()
             
-        # Debugging: Print parsed JSON
-        print("\n=== Parsed JSON Data ===")
-        print("Type:", type(data))
-        print("Content:", data)
-        
-        # Validate required fields
-        required_fields = ['user_id', 'amount', 'category']
-        if not all(field in data for field in required_fields):
-            return jsonify({
-                "error": "Missing required fields",
-                "required": required_fields,
-                "received": list(data.keys())
-            }), 400
-
-        # Robust amount parsing with detailed error reporting
-        print("\n=== Parsing Amount ===")
-        print("Original amount value:", data['amount'])
-        print("Amount type:", type(data['amount']))
-        
-        try:
-            amount_str = str(data['amount']).strip().replace(',', '.')  # Handle both comma and decimal
-            amount = float(amount_str)
-            print("Successfully converted amount:", amount)
-        except ValueError as e:
-            return jsonify({
-                "error": "Invalid amount format",
-                "details": str(e),
-                "received_value": str(data['amount']),
-                "expected_format": "Number (e.g., 30 or 30.50)",
-                "suggestion": "Use period as decimal separator"
-            }), 400
-
-        # Parse and validate other fields
-        try:
-            user_id = int(data['user_id'])
-        except ValueError:
-            return jsonify({"error": "user_id must be an integer"}), 400
-            
-        category = data['category'].lower().strip()
-        mood = data.get('mood', '').lower().strip()
-
-        if amount <= 0:
-            return jsonify({"error": "Amount must be positive"}), 400
-            
-        if category not in VALID_CATEGORIES:
-            return jsonify({
-                "error": "Invalid category",
-                "valid_categories": VALID_CATEGORIES,
-                "received_category": category
-            }), 400
-
-        # Handle timestamp
-        timestamp = datetime.datetime.now()
-        if 'timestamp' in data:
-            try:
-                timestamp = datetime.datetime.strptime(data['timestamp'], "%Y-%m-%d %H:%M:%S")
-                print("Using provided timestamp:", timestamp)
-            except ValueError:
-                return jsonify({
-                    "error": "Invalid timestamp format",
-                    "expected_format": "YYYY-MM-DD HH:MM:SS",
-                    "received_value": data['timestamp']
-                }), 400
-
-        # Database operations
-        conn = sqlite3.connect('spending_ai.db')
-        cursor = conn.cursor()
-
-        # Verify user exists
-        cursor.execute("SELECT 1 FROM users WHERE id=?", (user_id,))
-        if not cursor.fetchone():
-            conn.close()
-            return jsonify({"error": "User not found"}), 404
-
-        # Check for recent transactions
-        cursor.execute('''
-            SELECT amount, timestamp FROM transactions 
-            WHERE user_id=? AND category=?
-            ORDER BY timestamp DESC
-            LIMIT 1
-        ''', (user_id, category))
-        last_transaction = cursor.fetchone()
-        
-        # Cooldown check
-        is_in_cooldown = False
-        last_amount = None
-        last_time = None
-        hours_since_last = None
-        
-        if last_transaction:
-            last_amount, last_time_str = last_transaction
-            last_time = datetime.datetime.strptime(last_time_str, "%Y-%m-%d %H:%M:%S")
-            hours_since_last = (timestamp - last_time).total_seconds() / 3600
+            # Verify user exists
             cursor.execute('''
-                SELECT 1 FROM cooldowns 
-                WHERE user_id=? AND category=? AND expires_at > ?
-            ''', (user_id, category, timestamp))
-            is_in_cooldown = bool(cursor.fetchone())
-
-        # Budget check
-        budget_warning = None
-        cursor.execute('''
-            SELECT monthly_limit, current_spend 
-            FROM budgets 
-            WHERE user_id=? AND category=?
-        ''', (user_id, category))
-        budget = cursor.fetchone()
-        
-        if budget:
-            limit, spent = budget
-            if spent + amount > limit * 0.8:
-                budget_percent = int((spent + amount) / limit * 100)
-                budget_warning = {
-                    "type": "budget_alert",
-                    "message": f"⚠️ This will use {budget_percent}% of your {category} budget",
-                    "limit": limit,
-                    "new_total": spent + amount,
-                    "remaining": limit - (spent + amount)
-                }
-
-        # Impulse detection
-        flagged = False
-        warning_msg = None
-        if category not in ESSENTIAL_CATEGORIES + ['subscription']:
-            flagged = is_impulsive(user_id, amount, category, mood, timestamp)
-            if flagged:
-                cursor.execute('''
-                    INSERT OR REPLACE INTO cooldowns 
-                    (user_id, category, expires_at)
-                    VALUES (?, ?, datetime('now', '+24 hours'))
-                ''', (user_id, category))
-                warning_msg = "🚨 Impulse detected!" 
-
-        # Generate deterrence alerts
-        deterrence_alerts = []
-        
-        if is_in_cooldown and last_amount:
-            deterrence_alerts.append({
-                "type": "cooldown_warning",
-                "message": f"🔄 You recently spent ${last_amount:.2f} on {category} {hours_since_last:.1f}h ago",
-                "suggestion": "Consider waiting 24h unless essential",
-                "time_since_last": f"{hours_since_last:.1f} hours",
-                "previous_amount": last_amount
-            })
-            
-        if "stress" in mood and amount > 30:
-            deterrence_alerts.append({
-                "type": "emotional_spending",
-                "message": "🧠 Stress spending detected",
-                "suggestion": "Try a 10-minute walk before deciding",
-                "amount": amount,
-                "mood": mood
-            })
-            
-        if budget_warning:
-            deterrence_alerts.append(budget_warning)
-
-        # Log transaction
-        cursor.execute('''
-            INSERT INTO transactions 
-            (user_id, amount, category, mood, timestamp, flagged)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user_id, amount, category, mood, timestamp, flagged))
-
-        # Record spending pattern
-        cursor.execute('''
-            INSERT INTO spending_patterns 
-            (user_id, category, day_of_week, hour_of_day, amount, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user_id, category, timestamp.weekday(), timestamp.hour, amount, timestamp))
-
-        # Update streak if not impulsive
-        if not flagged:
-            cursor.execute('''
-                UPDATE users SET streak_days = streak_days + 1 
-                WHERE id=?
+                SELECT id, streak_days, last_transaction_date 
+                FROM users WHERE id=?
             ''', (user_id,))
-
-        # Update budget if exists
-        if budget:
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({
+                    "status": "error",
+                    "message": "User not found"
+                }), 404
+                
+            user_id_db, streak_days, last_date = user
+            today = timestamp.date()
+            
+            # Check budget
+            budget_warning = None
             cursor.execute('''
-                UPDATE budgets 
-                SET current_spend = current_spend + ? 
+                SELECT monthly_limit, current_spend 
+                FROM budgets 
                 WHERE user_id=? AND category=?
-            ''', (amount, user_id, category))
+            ''', (user_id, category))
+            budget = cursor.fetchone()
+            
+            if budget:
+                limit, spent = budget
+                new_total = spent + amount
+                budget_percent = min(int((new_total / limit) * 100), 999)  # Cap at 999%
+                
+                if new_total > limit:
+                    budget_warning = {
+                        "severity": "critical",
+                        "message": f"🚨 Budget exceeded by ${new_total - limit:.2f} ({budget_percent}%)",
+                        "limit": limit,
+                        "spent": new_total
+                    }
+                elif new_total > limit * 0.9:
+                    budget_warning = {
+                        "severity": "warning",
+                        "message": f"⚠️ Approaching budget limit ({budget_percent}%)",
+                        "limit": limit,
+                        "spent": new_total
+                    }
 
-        conn.commit()
-        conn.close()
+            # Impulse detection (never for essentials)
+            flagged = is_impulsive(user_id, amount, category, timestamp)
+            
+            # Record transaction
+            cursor.execute('''
+                INSERT INTO transactions 
+                (user_id, amount, category, timestamp, flagged)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, amount, category, timestamp, flagged))
+            
+            # Record spending pattern
+            cursor.execute('''
+                INSERT INTO spending_patterns 
+                (user_id, category, day_of_week, hour_of_day, amount, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (user_id, category, timestamp.weekday(), timestamp.hour, amount, timestamp))
 
-        return jsonify({
-            "message": "Transaction processed successfully",
-            "allowed": True,
-            "flagged": flagged,
-            "warning": warning_msg,
-            "deterrence_alerts": deterrence_alerts if deterrence_alerts else None,
-            "amount": amount,
-            "category": category,
-            "budget_impact": {
-                "percentage_used": budget_percent if budget else None,
-                "remaining": limit - (spent + amount) if budget else None
-            } if budget else None,
-            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        }), 200
+            # Update streak (only for non-impulsive transactions)
+            if not flagged:
+                if last_date:
+                    if isinstance(last_date, str):
+                        last_date = datetime.datetime.strptime(last_date, "%Y-%m-%d").date()
+                    
+                    if today == last_date:
+                        pass  # Same day, no change
+                    elif (today - last_date).days == 1:
+                        streak_days += 1  # Consecutive day
+                    else:
+                        streak_days = 1  # Broken streak
+                else:
+                    streak_days = 1  # First transaction
+                
+                cursor.execute('''
+                    UPDATE users 
+                    SET streak_days = ?, last_transaction_date = ?
+                    WHERE id=?
+                ''', (streak_days, today.isoformat(), user_id))
 
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON format"}), 400
+            # Update budget if exists
+            if budget:
+                cursor.execute('''
+                    UPDATE budgets 
+                    SET current_spend = current_spend + ? 
+                    WHERE user_id=? AND category=?
+                ''', (amount, user_id, category))
+
+            conn.commit()
+            
+            # Prepare response
+            response = {
+                "status": "success",
+                "data": {
+                    "transaction_id": cursor.lastrowid,
+                    "amount": amount,
+                    "category": category,
+                    "timestamp": timestamp.isoformat(),
+                    "flagged": flagged,
+                    "streak": streak_days if not flagged else 0,
+                    "insights": {
+                        "projections": get_future_projections(user_id),
+                        "suggestions": get_cool_down_suggestions(user_id, category)
+                    }
+                }
+            }
+            
+            if budget_warning:
+                response["warnings"] = [budget_warning]
+            
+            return jsonify(response), 200
+            
     except ValueError as e:
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
-    except sqlite3.Error as e:
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
     except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+        return jsonify({
+            "status": "error",
+            "message": f"Transaction processing failed: {str(e)}"
+        }), 500
+
+@app.route('/projections/<int:user_id>', methods=['GET'])
+def show_projections(user_id):
+    try:
+        projections = get_future_projections(user_id)
+        return jsonify({
+            "status": "success",
+            "data": projections
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/suggestions/<int:user_id>', methods=['GET'])
+def show_suggestions(user_id):
+    try:
+        suggestions = get_cool_down_suggestions(user_id)
+        return jsonify({
+            "status": "success",
+            "data": {
+                "suggestions": suggestions
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/heatmap/<int:user_id>', methods=['GET'])
 def get_heatmap(user_id):
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
-    
-    # Weekly pattern
-    cursor.execute('''
-        SELECT category, day_of_week, SUM(amount) as total
-        FROM spending_patterns
-        WHERE user_id=?
-        GROUP BY category, day_of_week
-    ''', (user_id,))
-    
-    weekly_data = defaultdict(lambda: [0]*7)
-    for category, day, total in cursor.fetchall():
-        weekly_data[category][day] = total
-    
-    # Daily pattern
-    cursor.execute('''
-        SELECT category, hour_of_day, SUM(amount) as total
-        FROM spending_patterns
-        WHERE user_id=?
-        GROUP BY category, hour_of_day
-    ''', (user_id,))
-    
-    daily_data = defaultdict(lambda: [0]*24)
-    for category, hour, total in cursor.fetchall():
-        daily_data[category][hour] = total
-    
-    conn.close()
-    
-    return jsonify({
-        "weekly_pattern": weekly_data,
-        "daily_pattern": daily_data
-    })
+    try:
+        with sqlite3.connect('spending_ai.db') as conn:
+            cursor = conn.cursor()
+            
+            # Weekly pattern
+            cursor.execute('''
+                SELECT category, day_of_week, SUM(amount) as total
+                FROM spending_patterns
+                WHERE user_id=?
+                GROUP BY category, day_of_week
+            ''', (user_id,))
+            
+            weekly_data = defaultdict(lambda: [0]*7)
+            for category, day, total in cursor.fetchall():
+                weekly_data[category][day] = total
+            
+            # Daily pattern
+            cursor.execute('''
+                SELECT category, hour_of_day, SUM(amount) as total
+                FROM spending_patterns
+                WHERE user_id=?
+                GROUP BY category, hour_of_day
+            ''', (user_id,))
+            
+            daily_data = defaultdict(lambda: [0]*24)
+            for category, hour, total in cursor.fetchall():
+                daily_data[category][hour] = total
+            
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "weekly_pattern": weekly_data,
+                    "daily_pattern": daily_data
+                }
+            })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/alerts/<int:user_id>', methods=['GET'])
 def get_all_alerts(user_id):
-    conn = sqlite3.connect('spending_ai.db')
-    cursor = conn.cursor()
-    
-    alerts = []
-    
-    # 1. Budget alerts
-    cursor.execute('''
-        SELECT category, monthly_limit, current_spend 
-        FROM budgets 
-        WHERE user_id=? AND current_spend > monthly_limit * 0.8
-    ''', (user_id,))
-    
-    for category, limit, spent in cursor.fetchall():
-        alerts.append({
-            "type": "budget_warning",
-            "message": f"{category} spending reached {int(spent/limit*100)}% of budget",
-            "category": category,
-            "spent": spent,
-            "limit": limit
-        })
-    
-    # 2. Spending spikes - FIXED QUERY
-    cursor.execute('''
-        WITH monthly_totals AS (
-            SELECT 
-                category, 
-                strftime('%Y-%m', timestamp) as month,
-                SUM(amount) as monthly_total
-            FROM transactions 
-            WHERE user_id=?
-            GROUP BY category, month
-        )
-        SELECT 
-            category,
-            SUM(CASE WHEN month = strftime('%Y-%m', 'now') THEN monthly_total ELSE 0 END) as current_month,
-            AVG(CASE WHEN month != strftime('%Y-%m', 'now') THEN monthly_total ELSE NULL END) as avg_monthly
-        FROM monthly_totals
-        GROUP BY category
-        HAVING current_month > avg_monthly * 1.3
-    ''', (user_id,))
-    
-    for category, current, avg in cursor.fetchall():
-        if avg:  # Only alert if we have historical data
-            alerts.append({
-                "type": "spending_spike",
-                "message": f"Spending on {category} is {int((current/avg-1)*100)}% higher than usual",
-                "category": category,
-                "current": current,
-                "average": avg
+    try:
+        with sqlite3.connect('spending_ai.db') as conn:
+            cursor = conn.cursor()
+            
+            alerts = []
+            
+            # Budget alerts
+            cursor.execute('''
+                SELECT category, monthly_limit, current_spend 
+                FROM budgets 
+                WHERE user_id=? AND current_spend > monthly_limit * 0.8
+                ORDER BY current_spend DESC
+            ''', (user_id,))
+            
+            for category, limit, spent in cursor.fetchall():
+                percent = min(int((spent / limit) * 100), 999)
+                alerts.append({
+                    "type": "budget_warning",
+                    "category": category,
+                    "severity": "critical" if spent > limit else "warning",
+                    "message": f"{category} spending at {percent}% of budget",
+                    "limit": limit,
+                    "spent": spent
+                })
+            
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "alerts": alerts
+                }
             })
-    
-    conn.close()
-    return jsonify({"alerts": alerts}), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/budgets', methods=['POST'])
 def set_budget():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    category = data.get('category')
-    limit = data.get('limit')
-    
-    if not all([user_id, category, limit]):
-        return jsonify({"error": "Missing required fields"}), 400
-    
     try:
-        limit = float(limit)
-        if limit <= 0:
-            return jsonify({"error": "Limit must be positive"}), 400
-            
-        if category.lower() not in VALID_CATEGORIES:
-            return jsonify({"error": "Invalid category"}), 400
-            
-        conn = sqlite3.connect('spending_ai.db')
-        cursor = conn.cursor()
+        data = validate_input(request.get_json(), ['user_id', 'category', 'limit'])
+        user_id = int(data['user_id'])
+        category = validate_category(data['category'])
+        limit = validate_amount(data['limit'])
         
-        cursor.execute('''
-            INSERT OR REPLACE INTO budgets 
-            (user_id, category, monthly_limit)
-            VALUES (?, ?, ?)
-        ''', (user_id, category.lower(), limit))
-        
-        conn.commit()
+        with sqlite3.connect('spending_ai.db') as conn:
+            cursor = conn.cursor()
+            
+            # Verify user exists
+            cursor.execute('SELECT 1 FROM users WHERE id=?', (user_id,))
+            if not cursor.fetchone():
+                return jsonify({
+                    "status": "error",
+                    "message": "User not found"
+                }), 404
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO budgets 
+                (user_id, category, monthly_limit)
+                VALUES (?, ?, ?)
+            ''', (user_id, category, limit))
+            
+            conn.commit()
+            
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "user_id": user_id,
+                    "category": category,
+                    "monthly_limit": limit
+                }
+            }), 201
+            
+    except ValueError as e:
         return jsonify({
-            "message": f"Budget set for {category}",
-            "limit": limit
-        }), 201
-    except ValueError:
-        return jsonify({"error": "Invalid limit amount"}), 400
-    finally:
-        conn.close()
+            "status": "error",
+            "message": str(e)
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Budget setting failed: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     create_db()
